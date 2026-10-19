@@ -1,0 +1,31 @@
+# Entornos y secretos locales
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Angular / Node
+**/node_modules/
+**/dist/
+**/.angular/
+**/coverage/
+npm-debug.log*
+
+# Java / Maven / Spring
+**/target/
+*.class
+*.log
+hs_err_pid*
+
+# IDE y sistema operativo
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.iml
+.project
+.classpath
+.settings/
+.DS_Store
+Thumbs.db
