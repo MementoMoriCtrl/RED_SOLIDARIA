@@ -12,6 +12,11 @@ ng serve
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
+## Donación: consulta de trazabilidad
+
+La ruta `/trazabilidad` permite consultar una donación por su código sin iniciar sesión. Durante `ng serve`, las peticiones a `/api/**` se reenvían a `http://localhost:8080` mediante `proxy.conf.json`, por lo que el navegador conserva el mismo origen y no necesita CORS para desarrollo local.
+
+La única ruta pública es `GET /api/donaciones/{codigoTrazabilidad}`. Su DTO omite datos personales y campos internos. El enlace «Acceso para organizaciones» lleva a `/acceso-organizaciones`; las credenciales se conservan solo en memoria y quedan pendientes hasta la primera operación protegida que las valide. El interceptor excluye el GET público y solo añade HTTP Basic a solicitudes privadas al servidor local. No envía credenciales a dominios externos.
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:

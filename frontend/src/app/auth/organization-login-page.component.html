@@ -1,0 +1,63 @@
+<main class="app-layout">
+  <aside class="sidebar" aria-label="Navegación principal">
+    <a class="brand" routerLink="/trazabilidad" aria-label="Red Solidaria, inicio">
+      <span class="brand-mark" aria-hidden="true">RS</span>
+      <span class="brand-copy"><strong>Red Solidaria</strong><small>Gestión y trazabilidad</small></span>
+    </a>
+    <p class="sidebar-label">MÓDULOS</p>
+    <nav class="side-nav" aria-label="Módulos disponibles">
+      <a class="nav-item" routerLink="/trazabilidad">
+        <span class="nav-icon" aria-hidden="true">T</span>
+        <span>Trazabilidad pública</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">Acceso privado<br />para organizaciones</div>
+  </aside>
+
+  <div class="page-shell">
+    <header class="page-header">
+      <span class="breadcrumb">Red Solidaria <span aria-hidden="true">/</span> Acceso</span>
+      <a class="org-login-link" routerLink="/trazabilidad">Volver a trazabilidad</a>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">ÁREA DE ORGANIZACIONES</p>
+      <h1 id="page-title">Acceso privado</h1>
+      <p class="intro-copy">La consulta pública está disponible sin cuenta. Esta pantalla prepara el acceso privado para operaciones que se incorporarán en una fase posterior.</p>
+    </section>
+
+    <section class="panel login-panel" aria-labelledby="login-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">AUTENTICACIÓN</p>
+          <h2 id="login-title">Iniciar sesión</h2>
+        </div>
+      </div>
+
+      <p class="login-explanation">Las credenciales se mantienen solo en memoria. Se validarán mediante HTTP Basic cuando se conecte una operación privada; esta pantalla no crea una sesión ni confirma el acceso por sí sola.</p>
+
+      <form class="login-form" (ngSubmit)="continuar()">
+        <label for="organization-email">Correo de acceso</label>
+        <input id="organization-email" name="correo" type="text" [(ngModel)]="correo" required autocomplete="off" />
+        <label for="organization-password">Contraseña</label>
+        <input id="organization-password" name="contrasena" type="password" [(ngModel)]="contrasena" required autocomplete="off" />
+        <button type="submit">Guardar credenciales en memoria</button>
+      </form>
+
+      @if (authState() === 'pending') {
+        <div class="auth-status auth-pending" role="status">Credenciales preparadas; aún no han sido validadas por el backend.</div>
+        <button type="button" class="secondary-button logout-button" (click)="cerrarSesion()">Cerrar sesión y limpiar credenciales</button>
+      } @else if (authState() === 'authenticated') {
+        <div class="auth-status" role="status">El backend validó las credenciales mediante una operación protegida.</div>
+        <button type="button" class="secondary-button logout-button" (click)="cerrarSesion()">Cerrar sesión</button>
+      } @else if (authState() === 'forbidden') {
+        <div class="alert" role="alert">El usuario autenticado no tiene permisos suficientes para la operación solicitada.</div>
+        <button type="button" class="secondary-button logout-button" (click)="cerrarSesion()">Cerrar sesión y limpiar credenciales</button>
+      }
+
+      @if (error) {
+        <div class="alert" role="alert">{{ error }}</div>
+      }
+    </section>
+  </div>
+</main>

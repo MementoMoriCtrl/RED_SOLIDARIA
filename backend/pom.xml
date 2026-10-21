@@ -131,4 +131,58 @@
 		</plugins>
 	</build>
 
+	<profiles>
+		<profile>
+			<id>bootstrap-admin</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.springframework.boot</groupId>
+						<artifactId>spring-boot-maven-plugin</artifactId>
+						<configuration>
+							<mainClass>pe.redsolidaria.bootstrap.BootstrapAdminCli</mainClass>
+							<arguments>
+								<argument>--confirm-bootstrap</argument>
+							</arguments>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>recover-admin-password</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.springframework.boot</groupId>
+						<artifactId>spring-boot-maven-plugin</artifactId>
+						<configuration>
+							<mainClass>pe.redsolidaria.bootstrap.AdminPasswordRecoveryCli</mainClass>
+							<arguments>
+								<argument>--confirm-password-recovery</argument>
+							</arguments>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>diagnose-admin-auth</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.springframework.boot</groupId>
+						<artifactId>spring-boot-maven-plugin</artifactId>
+						<configuration>
+							<mainClass>pe.redsolidaria.bootstrap.AdminAuthenticationDiagnosticCli</mainClass>
+							<arguments>
+								<argument>--diagnose-admin-auth</argument>
+							</arguments>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>

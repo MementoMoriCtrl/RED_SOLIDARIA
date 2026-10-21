@@ -1,0 +1,175 @@
+<main class="app-layout">
+  <aside class="sidebar" aria-label="Navegación principal">
+    <a class="brand" routerLink="/trazabilidad" aria-label="Red Solidaria, inicio">
+      <span class="brand-mark" aria-hidden="true">RS</span>
+      <span class="brand-copy"><strong>Red Solidaria</strong><small>Gestión y trazabilidad</small></span>
+    </a>
+    <p class="sidebar-label">MÓDULOS</p>
+    <nav class="side-nav" aria-label="Módulos disponibles">
+      <a class="nav-item active" routerLink="/trazabilidad" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">T</span>
+        <span>Trazabilidad</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">Consulta pública<br />de donaciones</div>
+  </aside>
+
+  <div class="page-shell">
+    <header class="page-header">
+      <span class="breadcrumb">Donaciones <span aria-hidden="true">/</span> Trazabilidad</span>
+      <a class="org-login-link" routerLink="/acceso-organizaciones">Acceso para organizaciones</a>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">TRANSPARENCIA Y SEGUIMIENTO</p>
+      <h1 id="page-title">Consulta de trazabilidad</h1>
+      <p class="intro-copy">Consulta el estado, los recursos y el recorrido logístico de una donación con su código.</p>
+    </section>
+
+    <section class="search-card" aria-label="Buscar una donación">
+      <form (ngSubmit)="consultar()" novalidate>
+        <label for="tracking-code">Código de trazabilidad</label>
+        <div class="search-row">
+          <input
+            id="tracking-code"
+            name="codigo"
+            type="text"
+            [(ngModel)]="codigo"
+            required
+            maxlength="100"
+            placeholder="Ej.: RS-…"
+            autocomplete="off"
+            spellcheck="false"
+            aria-required="true"
+            [attr.aria-invalid]="error && !codigo.trim() ? 'true' : null"
+            aria-describedby="search-help"
+          />
+          <button type="submit" [disabled]="cargando">
+            @if (cargando) {
+              <span class="spinner" aria-hidden="true"></span>
+              Consultando
+            } @else {
+              Consultar
+            }
+          </button>
+        </div>
+        <p id="search-help" class="field-help">La consulta pública no requiere iniciar sesión.</p>
+      </form>
+
+      @if (error) {
+        <div class="alert" role="alert">{{ error }}</div>
+      }
+    </section>
+
+    @if (resultado; as donacion) {
+      <div class="results" aria-live="polite">
+        <section class="panel overview" aria-labelledby="overview-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">RESUMEN</p>
+              <h2 id="overview-title">Información general</h2>
+            </div>
+            <span class="status-badge" [class.is-registered]="donacion.estado === 'REGISTRADA'" [class.is-pending]="donacion.estado === 'PENDIENTE'">{{ donacion.estado }}</span>
+          </div>
+
+          <dl class="summary-grid">
+            <div class="summary-item tracking">
+              <dt>Código de trazabilidad</dt>
+              <dd class="tracking-code">{{ donacion.codigoTrazabilidad }}</dd>
+            </div>
+            <div class="summary-item">
+              <dt>Fecha de registro</dt>
+              <dd>{{ donacion.fechaRegistro ? (donacion.fechaRegistro | date:'dd/MM/yyyy, HH:mm') : 'No disponible' }}</dd>
+            </div>
+            <div class="summary-item">
+              <dt>Fecha de ingreso</dt>
+              <dd>{{ donacion.fechaIngreso ? (donacion.fechaIngreso | date:'dd/MM/yyyy, HH:mm') : 'Aún no registrada' }}</dd>
+            </div>
+            <div class="summary-item">
+              <dt>Centro de acopio</dt>
+              <dd>{{ donacion.centroAcopio?.nombre || 'Sin centro asignado' }}</dd>
+              <span class="secondary-value">{{ donacion.centroAcopio?.ubicacion || 'Ubicación no disponible' }}</span>
+            </div>
+          </dl>
+        </section>
+
+        <section class="panel" aria-labelledby="details-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">CONTENIDO</p>
+              <h2 id="details-title">Detalles de recursos</h2>
+            </div>
+            <span class="count-badge">{{ donacion.detalles.length }} {{ donacion.detalles.length === 1 ? 'recurso' : 'recursos' }}</span>
+          </div>
+
+          @if (donacion.detalles.length > 0) {
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Recurso</th>
+                    <th scope="col">Cantidad donada</th>
+                    <th scope="col">Recibida en acopio</th>
+                    <th scope="col">Unidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (detalle of donacion.detalles; track $index) {
+                    <tr>
+                      <th scope="row">{{ detalle.recursoNombre || 'Recurso no disponible' }}</th>
+                      <td>{{ detalle.cantidadDonada | number:'1.0-3' }}</td>
+                      <td>@if (detalle.cantidadRecibidaAcopio !== null) { {{ detalle.cantidadRecibidaAcopio | number:'1.0-3' }} } @else { <span class="pending-badge">Pendiente</span> }</td>
+                      <td>{{ detalle.unidadNombre || detalle.unidadCodigo || 'No indicada' }}@if (detalle.unidadSimbolo) { <span class="unit-symbol">({{ detalle.unidadSimbolo }})</span> }</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="empty-state">Esta donación no tiene detalles de recursos registrados.</p>
+          }
+        </section>
+
+        <section class="panel" aria-labelledby="history-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">RECORRIDO</p>
+              <h2 id="history-title">Historial de movimientos</h2>
+            </div>
+            <span class="count-badge">{{ donacion.movimientos.length }} {{ donacion.movimientos.length === 1 ? 'movimiento' : 'movimientos' }}</span>
+          </div>
+
+          @if (donacion.movimientos.length > 0) {
+            <ol class="timeline">
+              @for (movimiento of donacion.movimientos; track $index) {
+                <li class="timeline-entry">
+                  <span class="timeline-marker" aria-hidden="true"></span>
+                  <article class="movement-card">
+                    <div class="movement-topline">
+                      <time>{{ movimiento.fechaHora ? (movimiento.fechaHora | date:'dd/MM/yyyy, HH:mm') : 'Fecha no disponible' }}</time>
+                      <span class="movement-state">
+                        {{ movimiento.estadoAnterior || 'Inicio' }}
+                        <span aria-hidden="true">→</span>
+                        {{ movimiento.estadoNuevo || 'Estado no disponible' }}
+                      </span>
+                    </div>
+                    <dl class="movement-details">
+                      <div class="movement-location">
+                        <dt>Ubicación</dt>
+                        <dd>{{ movimiento.ubicacion || 'No indicada' }}</dd>
+                      </div>
+                    </dl>
+                  </article>
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="empty-state">Aún no hay movimientos registrados para esta donación.</p>
+          }
+        </section>
+      </div>
+    }
+
+    <footer class="page-footer">Red Solidaria <span aria-hidden="true">·</span> Trazabilidad de donaciones</footer>
+  </div>
+</main>
