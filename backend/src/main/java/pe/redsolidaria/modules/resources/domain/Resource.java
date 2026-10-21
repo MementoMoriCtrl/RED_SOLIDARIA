@@ -18,7 +18,26 @@ public class Resource {
     @OneToMany(mappedBy = "recurso") private List<pe.redsolidaria.modules.donations.domain.DonationLine> donaciones = new ArrayList<>();
     @OneToMany(mappedBy = "recurso") private List<pe.redsolidaria.modules.needs.domain.Need> necesidades = new ArrayList<>();
     protected Resource() {}
+    public Resource(MeasurementUnit unidadMedida, String nombre, String categoria, String descripcion, String estado) {
+        this.unidadMedida = unidadMedida;
+        this.nombre = nombre;
+        this.categoria = categoria;
+        this.descripcion = descripcion;
+        this.estado = estado;
+    }
+    public void actualizar(MeasurementUnit unidadMedida, String nombre, String categoria, String descripcion) {
+        this.unidadMedida = unidadMedida;
+        this.nombre = nombre;
+        this.categoria = categoria;
+        this.descripcion = descripcion;
+    }
+    public void cambiarEstado(String estado) { this.estado = estado; }
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
+    public String getCategoria() { return categoria; }
+    public String getDescripcion() { return descripcion; }
+    public String getEstado() { return estado; }
+    public LocalDateTime getCreadoEn() { return creadoEn; }
+    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
     public MeasurementUnit getUnidadMedida() { return unidadMedida; }
 }

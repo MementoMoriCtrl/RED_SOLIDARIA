@@ -1,6 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -15,6 +15,7 @@ import { DonationTraceService } from './donation-trace.service';
 })
 export class DonationTracePageComponent {
   private readonly donationTrace = inject(DonationTraceService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   codigo = '';
   cargando = false;
@@ -33,7 +34,10 @@ export class DonationTracePageComponent {
 
     this.cargando = true;
     this.donationTrace.findByTrackingCode(code)
-      .pipe(finalize(() => this.cargando = false))
+      .pipe(finalize(() => {
+        this.cargando = false;
+        this.changeDetector.markForCheck();
+      }))
       .subscribe({
         next: (trace) => this.resultado = trace,
         error: (response: HttpErrorResponse) => this.error = this.errorFor(response),

@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { BasicAuthService } from './basic-auth.service';
@@ -11,6 +12,7 @@ import { BasicAuthService } from './basic-auth.service';
 })
 export class OrganizationLoginPageComponent {
   private readonly basicAuth = inject(BasicAuthService);
+  private readonly http = inject(HttpClient);
 
   readonly authState = this.basicAuth.state;
   correo = '';
@@ -24,6 +26,18 @@ export class OrganizationLoginPageComponent {
     }
     this.contrasena = '';
     this.error = null;
+    this.http.get('/api/auth/validate').subscribe({
+      next: () => this.basicAuth.markAuthenticated(),
+      error: (response: HttpErrorResponse) => {
+        if (response.status === 401) {
+          this.basicAuth.rejectCredentials();
+        } else if (response.status === 403) {
+          this.basicAuth.markForbidden();
+        } else {
+          this.basicAuth.markConnectionError();
+        }
+      },
+    });
   }
 
   cerrarSesion(): void {

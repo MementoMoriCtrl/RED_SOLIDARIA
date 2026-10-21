@@ -54,7 +54,12 @@ public class SecurityConfiguration {
                 .httpBasic(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/admin/**").hasAuthority("ACCESO_ADMINISTRAR")
-                        .requestMatchers(HttpMethod.GET, "/api/donaciones/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/recursos/**").hasAuthority("ACCESO_ADMINISTRAR")
+                        .requestMatchers(HttpMethod.PUT, "/api/recursos/**").hasAuthority("ACCESO_ADMINISTRAR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/recursos/**").hasAuthority("ACCESO_ADMINISTRAR")
+                        .requestMatchers("/api/recursos/**", "/api/unidades-medida/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/validate").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/donaciones/{codigoTrazabilidad}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donaciones/**")
                         .hasAnyAuthority("DONACION_REGISTRAR", "ACCESO_ADMINISTRAR")
                         .requestMatchers(HttpMethod.POST, "/api/donaciones").hasAuthority("DONACION_REGISTRAR")

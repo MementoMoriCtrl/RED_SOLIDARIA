@@ -28,7 +28,8 @@ describe('BasicAuthService', () => {
 
     auth.provideCredentials('user@example.test', 'test-password');
     auth.rejectCredentials();
-    expect(auth.state()).toBe('signed-out');
+    expect(auth.state()).toBe('invalid');
+    expect(auth.username()).toBeNull();
     expect(auth.authorizationHeader()).toBeNull();
   });
 });

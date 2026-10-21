@@ -1,0 +1,109 @@
+<main class="app-layout">
+  <aside class="sidebar" aria-label="Navegación principal">
+    <a class="brand" routerLink="/trazabilidad" aria-label="Red Solidaria, inicio">
+      <span class="brand-mark" aria-hidden="true">RS</span>
+      <span class="brand-copy"><strong>Red Solidaria</strong><small>Gestión y trazabilidad</small></span>
+    </a>
+    <p class="sidebar-label">MÓDULOS</p>
+    <nav class="side-nav" aria-label="Módulos disponibles">
+      <a class="nav-item" routerLink="/trazabilidad"><span class="nav-icon" aria-hidden="true">T</span><span>Trazabilidad</span></a>
+      <a class="nav-item active" routerLink="/recursos" aria-current="page"><span class="nav-icon" aria-hidden="true">R</span><span>Recursos</span></a>
+    </nav>
+    <div class="sidebar-footer">Catálogo de recursos<br />Red Solidaria</div>
+  </aside>
+
+  <div class="page-shell">
+    <header class="page-header">
+      <span class="breadcrumb">Gestión <span aria-hidden="true">/</span> Recursos</span>
+      <a class="org-login-link" routerLink="/acceso-organizaciones">Acceso para organizaciones</a>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">MÓDULO 1 · FASE 2</p>
+      <h1 id="page-title">Gestión de recursos</h1>
+      <p class="intro-copy">Consulta y administra el catálogo de recursos y sus unidades de medida.</p>
+    </section>
+
+    @if (success) { <div class="resource-notice success-notice" role="status">{{ success }}</div> }
+    @if (error) { <div class="alert" role="alert">{{ error }}</div> }
+
+    <section class="panel resource-toolbar" aria-label="Buscar recursos">
+      <div class="resource-filters">
+        <label class="resource-search">Buscar por nombre
+          <input type="search" [(ngModel)]="searchText" placeholder="Ej.: agua" autocomplete="off" />
+        </label>
+        <label>Filtrar por categoría
+          <select [(ngModel)]="selectedCategory">
+            <option value="">Todas las categorías</option>
+            @for (category of categories; track category) { <option [value]="category">{{ category }}</option> }
+          </select>
+        </label>
+      </div>
+      <button class="primary-button" type="button" (click)="nuevo()" [disabled]="loading || units.length === 0">Registrar recurso</button>
+    </section>
+    @if (!loading && units.length === 0) {
+      <div class="resource-notice" role="status">No hay unidades de medida registradas; no se pueden crear recursos hasta disponer de una unidad existente.</div>
+    }
+
+    @if (formOpen) {
+      <section class="panel resource-form-panel" aria-labelledby="resource-form-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">CATÁLOGO</p><h2 id="resource-form-title">{{ form.id === null ? 'Registrar recurso' : 'Editar recurso' }}</h2></div>
+        </div>
+        <form class="resource-form" (ngSubmit)="guardar()" novalidate>
+          <label>Nombre
+            <input name="nombre" [(ngModel)]="form.nombre" maxlength="100" required autocomplete="off" />
+          </label>
+          <label>Categoría
+            <input name="categoria" [(ngModel)]="form.categoria" maxlength="100" required autocomplete="off" />
+          </label>
+          <label>Unidad de medida
+            <select name="unidadMedidaId" [(ngModel)]="form.unidadMedidaId" required>
+              <option [ngValue]="null" disabled>Selecciona una unidad</option>
+              @for (unit of units; track unit.id) {
+                <option [ngValue]="unit.id">{{ unit.nombre }}{{ unit.simbolo ? ' (' + unit.simbolo + ')' : '' }}</option>
+              }
+            </select>
+          </label>
+          <label class="description-field">Descripción
+            <textarea name="descripcion" [(ngModel)]="form.descripcion" rows="3"></textarea>
+          </label>
+          @if (formError) { <div class="alert form-message" role="alert">{{ formError }}</div> }
+          <div class="form-actions">
+            <button class="primary-button" type="submit" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar recurso' }}</button>
+            <button class="secondary-button" type="button" (click)="cancelar()" [disabled]="saving">Cancelar</button>
+          </div>
+        </form>
+      </section>
+    }
+
+    @if (loading) {
+      <section class="panel resource-load" role="status"><span class="spinner resource-spinner" aria-hidden="true"></span>Cargando catálogo de recursos…</section>
+    } @else if (!error && filteredResources.length === 0) {
+      <section class="panel resource-empty" role="status">
+        <h2>{{ resources.length === 0 ? 'Aún no hay recursos registrados' : 'No encontramos recursos' }}</h2>
+        <p>{{ resources.length === 0 ? 'Registra el primer recurso para iniciar el catálogo.' : 'Prueba con otro nombre o categoría.' }}</p>
+      </section>
+    } @else if (!loading && filteredResources.length > 0) {
+      <section class="resource-grid" aria-label="Catálogo de recursos">
+        @for (resource of filteredResources; track resource.id) {
+          <article class="panel resource-card">
+            <div class="resource-card-top">
+              <span class="resource-category">{{ resource.categoria }}</span>
+              <span class="resource-status" [class.is-inactive]="resource.estado !== 'ACTIVO'">{{ resource.estado }}</span>
+            </div>
+            <h2>{{ resource.nombre }}</h2>
+            <p class="resource-unit">{{ resource.unidadMedida.nombre }}{{ resource.unidadMedida.simbolo ? ' · ' + resource.unidadMedida.simbolo : '' }}</p>
+            <p class="resource-description">{{ resource.descripcion || 'Sin descripción' }}</p>
+            <div class="resource-actions">
+              <button class="secondary-button" type="button" (click)="editar(resource)">Editar</button>
+              <button class="text-button" type="button" (click)="toggleState(resource)" [disabled]="changingStateId !== null">
+                {{ changingStateId === resource.id ? 'Actualizando…' : resource.estado === 'ACTIVO' ? 'Desactivar' : 'Activar' }}
+              </button>
+            </div>
+          </article>
+        }
+      </section>
+    }
+  </div>
+</main>

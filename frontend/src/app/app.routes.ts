@@ -7,6 +7,11 @@ export const routes: Routes = [
       .then((module) => module.OrganizationLoginPageComponent),
   },
   {
+    path: 'recursos',
+    loadComponent: () => import('./resources/resource-management-page.component')
+      .then((module) => module.ResourceManagementPageComponent),
+  },
+  {
     path: 'trazabilidad',
     loadComponent: () => import('./donations/donation-trace-page.component')
       .then((module) => module.DonationTracePageComponent),

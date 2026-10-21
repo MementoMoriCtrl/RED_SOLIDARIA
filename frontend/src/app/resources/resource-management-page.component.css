@@ -1,0 +1,54 @@
+:host { display: block; min-height: 100vh; }
+
+.resource-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.resource-filters { display: grid; width: min(100%, 680px); grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr); gap: .8rem; }
+.resource-filters label, .resource-form label { display: grid; gap: .45rem; color: #475569; font-size: .76rem; font-weight: 700; }
+.resource-filters input, .resource-filters select, .resource-form input, .resource-form select, .resource-form textarea {
+  width: 100%; min-width: 0; min-height: 43px; padding: .65rem .75rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: .86rem;
+}
+.resource-form textarea { resize: vertical; }
+.resource-filters input:focus, .resource-filters select:focus, .resource-form input:focus, .resource-form select:focus, .resource-form textarea:focus { border-color: var(--blue); outline: 0; box-shadow: 0 0 0 3px rgb(37 99 235 / 13%); }
+.primary-button, .secondary-button, .text-button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; padding: .6rem .9rem; border-radius: 8px; cursor: pointer; font: inherit; font-size: .8rem; font-weight: 700; }
+.primary-button { border: 1px solid var(--blue); background: var(--blue); color: #fff; }
+.primary-button:hover:not(:disabled) { border-color: var(--blue-hover); background: var(--blue-hover); }
+.primary-button:disabled, .secondary-button:disabled, .text-button:disabled { cursor: not-allowed; opacity: .58; }
+.secondary-button { border: 1px solid #cbd5e1; background: #fff; color: var(--navy); }
+.secondary-button:hover:not(:disabled) { background: #f8fafc; }
+.text-button { border: 0; background: transparent; color: var(--blue-hover); }
+.text-button:hover:not(:disabled) { background: #eff6ff; }
+.resource-form-panel { margin-top: 1rem; }
+.resource-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
+.description-field, .form-message, .form-actions { grid-column: 1 / -1; }
+.form-actions { display: flex; justify-content: flex-end; gap: .6rem; }
+.resource-notice { margin: 0 0 1rem; padding: .8rem .9rem; border: 1px solid #bbf7d0; border-radius: 9px; background: #f0fdf4; color: #166534; font-size: .86rem; }
+.resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+.resource-card { display: flex; min-width: 0; flex-direction: column; gap: .65rem; }
+.resource-card-top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.resource-category { color: var(--muted); font-size: .7rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+.resource-status { padding: .3rem .55rem; border-radius: 999px; background: #dcfce7; color: #166534; font-size: .68rem; font-weight: 750; }
+.resource-status.is-inactive { background: #f1f5f9; color: #64748b; }
+.resource-card h2 { overflow-wrap: anywhere; }
+.resource-unit { margin: 0; color: var(--navy); font-size: .83rem; font-weight: 650; }
+.resource-description { min-height: 2.8rem; margin: 0; color: var(--muted); font-size: .79rem; line-height: 1.5; overflow-wrap: anywhere; }
+.resource-actions { display: flex; align-items: center; gap: .4rem; margin-top: auto; padding-top: .35rem; border-top: 1px solid var(--border); }
+.resource-load, .resource-empty { display: flex; align-items: center; gap: .7rem; margin-top: 1rem; color: var(--muted); font-size: .86rem; }
+.resource-empty { display: block; }
+.resource-empty h2 { margin-bottom: .4rem; }
+.resource-empty p { margin-bottom: 0; color: var(--muted); font-size: .84rem; }
+.resource-spinner { flex: 0 0 auto; border-color: #bfdbfe; border-top-color: var(--blue); }
+
+@media (max-width: 1020px) { .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 680px) {
+  .resource-toolbar { align-items: stretch; flex-direction: column; }
+  .resource-filters { width: 100%; grid-template-columns: 1fr; }
+  .resource-grid { grid-template-columns: 1fr; }
+  .resource-form { grid-template-columns: 1fr; }
+  .description-field, .form-message, .form-actions { grid-column: auto; }
+  .resource-toolbar > .primary-button { width: 100%; }
+}

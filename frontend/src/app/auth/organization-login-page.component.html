@@ -34,18 +34,18 @@
         </div>
       </div>
 
-      <p class="login-explanation">Las credenciales se mantienen solo en memoria. Se validarán mediante HTTP Basic cuando se conecte una operación privada; esta pantalla no crea una sesión ni confirma el acceso por sí sola.</p>
+      <p class="login-explanation">Las credenciales se mantienen solo en memoria y se validan con HTTP Basic. La consulta pública de trazabilidad sigue disponible sin iniciar sesión.</p>
 
       <form class="login-form" (ngSubmit)="continuar()">
         <label for="organization-email">Correo de acceso</label>
         <input id="organization-email" name="correo" type="text" [(ngModel)]="correo" required autocomplete="off" />
         <label for="organization-password">Contraseña</label>
         <input id="organization-password" name="contrasena" type="password" [(ngModel)]="contrasena" required autocomplete="off" />
-        <button type="submit">Guardar credenciales en memoria</button>
+        <button type="submit">Validar acceso</button>
       </form>
 
       @if (authState() === 'pending') {
-        <div class="auth-status auth-pending" role="status">Credenciales preparadas; aún no han sido validadas por el backend.</div>
+        <div class="auth-status auth-pending" role="status">Validando credenciales con el backend…</div>
         <button type="button" class="secondary-button logout-button" (click)="cerrarSesion()">Cerrar sesión y limpiar credenciales</button>
       } @else if (authState() === 'authenticated') {
         <div class="auth-status" role="status">El backend validó las credenciales mediante una operación protegida.</div>
@@ -53,6 +53,14 @@
       } @else if (authState() === 'forbidden') {
         <div class="alert" role="alert">El usuario autenticado no tiene permisos suficientes para la operación solicitada.</div>
         <button type="button" class="secondary-button logout-button" (click)="cerrarSesion()">Cerrar sesión y limpiar credenciales</button>
+      }
+
+      @if (authState() === 'invalid') {
+        <div class="alert" role="alert">El correo o la contraseña son incorrectos.</div>
+      }
+
+      @if (authState() === 'error') {
+        <div class="alert" role="alert">No se pudo conectar con el servidor. Verifica la conexión e inténtalo de nuevo.</div>
       }
 
       @if (error) {
