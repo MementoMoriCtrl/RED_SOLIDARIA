@@ -27,6 +27,23 @@ class AccessManagementServiceTest {
     @Mock PermissionRepository permissions;
 
     @Test
+    void authenticatedProfileReturnsRoleAndEffectivePermissionsWithoutSensitiveFields() {
+        var role = new Role("ADMINISTRADOR", "Administrador", null);
+        role.asignar(new Permission("ACCESO_ADMINISTRAR", "Administrar acceso"));
+        role.asignar(new Permission("DONACION_REGISTRAR", "Registrar donaciones"));
+        var account = new UserAccount(role, "Ana", "Pérez", "ana@example.test", "hash-no-debe-exponerse", "ACTIVO");
+        when(users.findByCorreo("ana@example.test")).thenReturn(java.util.Optional.of(account));
+        var service = new AccessManagementService(users, roles, permissions, new BCryptPasswordEncoder(4));
+
+        var profile = service.authenticatedProfile("ana@example.test");
+
+        assertEquals("ana@example.test", profile.correo());
+        assertEquals("ADMINISTRADOR", profile.rolCodigo());
+        assertEquals(java.util.Set.of("ACCESO_ADMINISTRAR", "DONACION_REGISTRAR"), profile.permisos());
+        assertFalse(profile.toString().contains("hash-no-debe-exponerse"));
+    }
+
+    @Test
     void createUserStoresOnlyBcryptHashAndResponseDoesNotContainPassword() {
         var encoder = new BCryptPasswordEncoder(4);
         var service = new AccessManagementService(users, roles, permissions, encoder);

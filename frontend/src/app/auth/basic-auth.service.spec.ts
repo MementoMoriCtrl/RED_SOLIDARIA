@@ -15,8 +15,10 @@ describe('BasicAuthService', () => {
     expect(auth.provideCredentials('user@example.test', 'test-password')).toBe(true);
     expect(auth.state()).toBe('pending');
     expect(auth.authorizationHeader()).toBe(`Basic ${btoa('user@example.test:test-password')}`);
-    auth.markAuthenticated();
+    auth.markAuthenticated({ nombre: 'Admin', apellido: 'Prueba', correo: 'user@example.test',
+      rolCodigo: 'ADMINISTRADOR', rolNombre: 'Administrador', permisos: ['ACCESO_ADMINISTRAR'] });
     expect(auth.state()).toBe('authenticated');
+    expect(auth.hasPermission('ACCESO_ADMINISTRAR')).toBe(true);
   });
 
   it('clears credentials when logging out or rejecting a 401', () => {
@@ -25,6 +27,7 @@ describe('BasicAuthService', () => {
     expect(auth.state()).toBe('signed-out');
     expect(auth.username()).toBeNull();
     expect(auth.authorizationHeader()).toBeNull();
+    expect(auth.profile()).toBeNull();
 
     auth.provideCredentials('user@example.test', 'test-password');
     auth.rejectCredentials();

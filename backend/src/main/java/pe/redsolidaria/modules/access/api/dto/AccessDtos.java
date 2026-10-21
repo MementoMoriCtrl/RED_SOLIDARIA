@@ -17,6 +17,8 @@ public final class AccessDtos {
                                LocalDateTime creadoEn, Set<String> permisos) {}
     public record PermissionResponse(Long id, String codigo, String descripcion,
                                      LocalDateTime creadoEn) {}
+    public record AuthenticatedProfileResponse(String nombre, String apellido, String correo,
+                                              String rolCodigo, String rolNombre, Set<String> permisos) {}
 
     public record CreateUserRequest(@NotNull Long rolId, @NotBlank @Size(max = 100) String nombre,
                                     @NotBlank @Size(max = 100) String apellido,

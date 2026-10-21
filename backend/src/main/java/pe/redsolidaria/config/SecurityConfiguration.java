@@ -59,6 +59,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.PATCH, "/api/recursos/**").hasAuthority("ACCESO_ADMINISTRAR")
                         .requestMatchers("/api/recursos/**", "/api/unidades-medida/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/auth/validate").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/donaciones/{codigoTrazabilidad}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donaciones/**")
                         .hasAnyAuthority("DONACION_REGISTRAR", "ACCESO_ADMINISTRAR")

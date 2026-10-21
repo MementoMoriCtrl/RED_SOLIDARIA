@@ -1,7 +1,7 @@
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+﻿import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { routes } from '../app.routes';
 import { basicAuthInterceptor } from './basic-auth.interceptor';
@@ -29,20 +29,24 @@ describe('OrganizationLoginPageComponent', () => {
     fixture.detectChanges();
   });
 
-  it('confirms valid credentials only after the backend responds successfully', () => {
+  it('confirms valid credentials only after the backend responds successfully', async () => {
     fixture.componentInstance.correo = 'org@example.test';
     fixture.componentInstance.contrasena = 'test-password';
     fixture.componentInstance.continuar();
     fixture.detectChanges();
 
     expect(auth.state()).toBe('pending');
-    expect(fixture.nativeElement.textContent).not.toContain('El backend validó');
     const request = http.expectOne('/api/auth/validate');
     expect(request.request.headers.has('Authorization')).toBe(true);
     request.flush(null, { status: 204, statusText: 'No Content' });
+    const profileRequest = http.expectOne('/api/auth/me');
+    expect(profileRequest.request.headers.has('Authorization')).toBe(true);
+    profileRequest.flush({ nombre: 'Admin', apellido: 'Prueba', correo: 'org@example.test', rolCodigo: 'ADMINISTRADOR',
+      rolNombre: 'Administrador', permisos: ['ACCESO_ADMINISTRAR'] });
+    await fixture.whenStable();
     fixture.detectChanges();
     expect(auth.state()).toBe('authenticated');
-    expect(fixture.nativeElement.textContent).toContain('El backend validó');
+    expect(TestBed.inject(Router).url).toBe('/admin');
   });
 
   it('shows invalid credentials and clears their password from memory', () => {
@@ -70,6 +74,20 @@ describe('OrganizationLoginPageComponent', () => {
     fixture.detectChanges();
     expect(auth.state()).toBe('error');
     expect(fixture.nativeElement.textContent).toContain('No se pudo conectar');
+  });
+
+  it('accepts valid credentials but does not open the panel without admin permission', () => {
+    fixture.componentInstance.correo = 'org@example.test';
+    fixture.componentInstance.contrasena = 'test-password';
+    fixture.componentInstance.continuar();
+    http.expectOne('/api/auth/validate').flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne('/api/auth/me').flush({ nombre: 'Org', apellido: 'User', correo: 'org@example.test',
+      rolCodigo: 'ORGANIZACION', rolNombre: 'Organización', permisos: ['DONACION_REGISTRAR'] });
+    fixture.detectChanges();
+    expect(auth.state()).toBe('authenticated');
+    expect(auth.hasPermission('ACCESO_ADMINISTRAR')).toBe(false);
+    expect(TestBed.inject(Router).url).not.toBe('/admin');
+    expect(fixture.nativeElement.textContent).toContain('no tiene permiso de acceso administrativo');
   });
 
   it('clears in-memory credentials on logout', () => {

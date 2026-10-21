@@ -1,8 +1,8 @@
 import { Component, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { BasicAuthService } from './basic-auth.service';
+import { Router, RouterLink } from '@angular/router';
+import { AuthenticatedProfile, BasicAuthService } from './basic-auth.service';
 
 @Component({
   selector: 'app-organization-login-page',
@@ -13,8 +13,10 @@ import { BasicAuthService } from './basic-auth.service';
 export class OrganizationLoginPageComponent {
   private readonly basicAuth = inject(BasicAuthService);
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
 
   readonly authState = this.basicAuth.state;
+  basicAuthHasAdmin(): boolean { return this.basicAuth.hasPermission('ACCESO_ADMINISTRAR'); }
   correo = '';
   contrasena = '';
   error: string | null = null;
@@ -26,17 +28,15 @@ export class OrganizationLoginPageComponent {
     }
     this.contrasena = '';
     this.error = null;
-    this.http.get('/api/auth/validate').subscribe({
-      next: () => this.basicAuth.markAuthenticated(),
-      error: (response: HttpErrorResponse) => {
-        if (response.status === 401) {
-          this.basicAuth.rejectCredentials();
-        } else if (response.status === 403) {
-          this.basicAuth.markForbidden();
-        } else {
-          this.basicAuth.markConnectionError();
-        }
-      },
+    this.http.get<void>('/api/auth/validate').subscribe({
+      next: () => this.http.get<AuthenticatedProfile>('/api/auth/me').subscribe({
+        next: (profile) => {
+          this.basicAuth.markAuthenticated(profile);
+          if (this.basicAuth.hasPermission('ACCESO_ADMINISTRAR')) void this.router.navigateByUrl('/admin');
+        },
+        error: (response: HttpErrorResponse) => this.handleAuthError(response),
+      }),
+      error: (response: HttpErrorResponse) => this.handleAuthError(response),
     });
   }
 
@@ -45,5 +45,11 @@ export class OrganizationLoginPageComponent {
     this.correo = '';
     this.contrasena = '';
     this.error = null;
+  }
+
+  private handleAuthError(response: HttpErrorResponse): void {
+    if (response.status === 401) this.basicAuth.rejectCredentials();
+    else if (response.status === 403) this.basicAuth.markForbidden();
+    else this.basicAuth.markConnectionError();
   }
 }

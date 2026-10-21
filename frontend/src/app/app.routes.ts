@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { administratorGuard, authenticatedGuard } from './auth/auth.guards';
 
 export const routes: Routes = [
   {
@@ -7,7 +8,14 @@ export const routes: Routes = [
       .then((module) => module.OrganizationLoginPageComponent),
   },
   {
+    path: 'admin',
+    canActivate: [administratorGuard],
+    loadComponent: () => import('./admin/admin-dashboard-page.component')
+      .then((module) => module.AdminDashboardPageComponent),
+  },
+  {
     path: 'recursos',
+    canActivate: [authenticatedGuard],
     loadComponent: () => import('./resources/resource-management-page.component')
       .then((module) => module.ResourceManagementPageComponent),
   },

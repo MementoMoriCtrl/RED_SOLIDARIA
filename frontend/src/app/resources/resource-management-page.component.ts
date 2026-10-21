@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import { MeasurementUnit, ResourceItem, SaveResourceRequest } from './resource.model';
 import { ResourceApiService } from './resource-api.service';
+import { BasicAuthService } from '../auth/basic-auth.service';
 
 interface ResourceForm {
   id: number | null;
@@ -23,6 +24,9 @@ interface ResourceForm {
 })
 export class ResourceManagementPageComponent implements OnInit {
   private readonly api = inject(ResourceApiService);
+  private readonly auth = inject(BasicAuthService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  readonly isAdmin = () => this.auth.hasPermission('ACCESO_ADMINISTRAR');
 
   resources: ResourceItem[] = [];
   units: MeasurementUnit[] = [];
@@ -57,14 +61,17 @@ export class ResourceManagementPageComponent implements OnInit {
   load(): void {
     this.loading = true;
     this.error = null;
-    forkJoin({ resources: this.api.resources(), units: this.api.measurementUnits() }).subscribe({
+    forkJoin({ resources: this.api.resources(), units: this.api.measurementUnits() }).pipe(
+      finalize(() => {
+        this.loading = false;
+        this.changeDetector.markForCheck();
+      }),
+    ).subscribe({
       next: ({ resources, units }) => {
         this.resources = resources;
         this.units = units;
-        this.loading = false;
       },
       error: (error: HttpErrorResponse) => {
-        this.loading = false;
         this.error = this.errorMessage(error, 'No se pudo cargar el catálogo de recursos.');
       },
     });
@@ -108,16 +115,17 @@ export class ResourceManagementPageComponent implements OnInit {
     this.saving = true;
     this.success = null;
     const save = this.form.id === null ? this.api.create(request) : this.api.update(this.form.id, request);
-    save.subscribe({
+    save.pipe(finalize(() => {
+      this.saving = false;
+      this.changeDetector.markForCheck();
+    })).subscribe({
       next: (saved) => {
         this.resources = [...this.resources.filter((item) => item.id !== saved.id), saved]
           .sort((a, b) => a.nombre.localeCompare(b.nombre));
-        this.saving = false;
         this.formOpen = false;
         this.success = this.form.id === null ? 'Recurso registrado correctamente.' : 'Recurso actualizado correctamente.';
       },
       error: (error: HttpErrorResponse) => {
-        this.saving = false;
         this.formError = this.errorMessage(error, 'No se pudo guardar el recurso.');
       },
     });
@@ -129,14 +137,15 @@ export class ResourceManagementPageComponent implements OnInit {
     this.error = null;
     this.success = null;
     const estado = resource.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
-    this.api.changeState(resource.id, { estado }).subscribe({
+    this.api.changeState(resource.id, { estado }).pipe(finalize(() => {
+      this.changingStateId = null;
+      this.changeDetector.markForCheck();
+    })).subscribe({
       next: (updated) => {
         this.resources = this.resources.map((item) => item.id === updated.id ? updated : item);
-        this.changingStateId = null;
         this.success = estado === 'ACTIVO' ? 'Recurso activado.' : 'Recurso desactivado.';
       },
       error: (error: HttpErrorResponse) => {
-        this.changingStateId = null;
         this.error = this.errorMessage(error, 'No se pudo cambiar el estado del recurso.');
       },
     });

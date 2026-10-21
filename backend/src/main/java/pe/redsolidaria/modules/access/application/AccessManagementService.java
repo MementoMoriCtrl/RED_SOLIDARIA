@@ -35,6 +35,17 @@ public class AccessManagementService {
     public List<RoleResponse> roles() { return roles.findAllByOrderByIdAsc().stream().map(this::roleResponse).toList(); }
     public List<PermissionResponse> permissions() { return permissions.findAllByOrderByIdAsc().stream().map(this::permissionResponse).toList(); }
 
+    public AuthenticatedProfileResponse authenticatedProfile(String correo) {
+        UserAccount user = users.findByCorreo(correo)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        Role role = user.getRol();
+        Set<String> effectivePermissions = role.getAsignaciones().stream()
+                .map(assignment -> assignment.getPermiso().getCodigo())
+                .collect(Collectors.toUnmodifiableSet());
+        return new AuthenticatedProfileResponse(user.getNombre(), user.getApellido(), user.getCorreo(),
+                role.getCodigo(), role.getNombre(), effectivePermissions);
+    }
+
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         try {

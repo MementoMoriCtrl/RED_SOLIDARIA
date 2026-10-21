@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { DonationTrace } from './donation-trace.model';
 import { DonationTraceService } from './donation-trace.service';
+import { BasicAuthService } from '../auth/basic-auth.service';
 
 @Component({
   selector: 'app-donation-trace-page',
@@ -15,7 +16,9 @@ import { DonationTraceService } from './donation-trace.service';
 })
 export class DonationTracePageComponent {
   private readonly donationTrace = inject(DonationTraceService);
+  private readonly auth = inject(BasicAuthService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  readonly isAdmin = () => this.auth.hasPermission('ACCESO_ADMINISTRAR');
 
   codigo = '';
   cargando = false;

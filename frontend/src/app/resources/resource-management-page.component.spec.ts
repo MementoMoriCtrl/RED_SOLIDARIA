@@ -29,13 +29,29 @@ describe('ResourceManagementPageComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(ResourceManagementPageComponent);
     http = TestBed.inject(HttpTestingController);
-    fixture.detectChanges();
+    fixture.autoDetectChanges();
     http.expectOne('/api/recursos').flush(initialResources);
     http.expectOne('/api/unidades-medida').flush(units);
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   afterEach(() => http.verify());
+
+  it('ends catalog loading and renders the response after requests complete', () => {
+    expect(fixture.componentInstance.loading).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Cargando catÃ¡logo de recursos');
+    expect(fixture.nativeElement.textContent).toContain('Arroz');
+  });
+
+  it('ends catalog loading and shows an error when a request fails', async () => {
+    fixture.componentInstance.load();
+    http.expectOne('/api/unidades-medida').flush(units);
+    http.expectOne('/api/recursos').flush({}, { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+    expect(fixture.componentInstance.loading).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Cargando catÃ¡logo de recursos');
+    expect(fixture.nativeElement.textContent).toContain('No se pudo cargar');
+  });
 
   it('filters the catalog by the existing name and category fields', () => {
     const component = fixture.componentInstance;
@@ -68,7 +84,7 @@ describe('ResourceManagementPageComponent', () => {
     http.expectNone({ method: 'POST', url: '/api/recursos' });
   });
 
-  it('creates a resource and updates its state through the backend', () => {
+  it('creates a resource and updates its state through the backend', async () => {
     const component = fixture.componentInstance;
     component.nuevo();
     component.form.nombre = '  Botiquín  ';
@@ -79,6 +95,9 @@ describe('ResourceManagementPageComponent', () => {
     const create = http.expectOne('/api/recursos');
     expect(create.request.body).toEqual({ nombre: 'Botiquín', categoria: 'Salud', descripcion: null, unidadMedidaId: 2 });
     create.flush(body);
+    await fixture.whenStable();
+    expect(component.saving).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Guardando');
     expect(component.success).toContain('registrado');
     expect(component.resources.some((resource) => resource.id === 6)).toBe(true);
 
@@ -86,13 +105,31 @@ describe('ResourceManagementPageComponent', () => {
     const change = http.expectOne('/api/recursos/6/estado');
     expect(change.request.body).toEqual({ estado: 'INACTIVO' });
     change.flush({ ...body, estado: 'INACTIVO' });
+    await fixture.whenStable();
+    expect(component.changingStateId).toBeNull();
     expect(component.resources.find((resource) => resource.id === 6)?.estado).toBe('INACTIVO');
   });
 
-  it('reports server authorization errors without changing the catalog', () => {
+  it('ends saving and keeps the edit form open with an error when update fails', async () => {
+    const component = fixture.componentInstance;
+    component.editar(initialResources[1]);
+    component.form.nombre = 'Arroz actualizado';
+    component.guardar();
+    expect(component.saving).toBe(true);
+    http.expectOne('/api/recursos/5').flush({}, { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+    expect(component.saving).toBe(false);
+    expect(component.formOpen).toBe(true);
+    expect(fixture.nativeElement.textContent).not.toContain('Guardando');
+    expect(fixture.nativeElement.textContent).toContain('No se pudo guardar el recurso');
+  });
+
+  it('reports server authorization errors without changing the catalog', async () => {
     const component = fixture.componentInstance;
     component.toggleState(initialResources[0]);
     http.expectOne('/api/recursos/4/estado').flush({}, { status: 403, statusText: 'Forbidden' });
+    await fixture.whenStable();
+    expect(component.changingStateId).toBeNull();
     expect(component.error).toContain('no tiene permiso');
     expect(component.resources[0].estado).toBe('ACTIVO');
   });

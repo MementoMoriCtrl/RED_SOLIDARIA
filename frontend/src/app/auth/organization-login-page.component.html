@@ -1,4 +1,4 @@
-<main class="app-layout">
+﻿<main class="app-layout">
   <aside class="sidebar" aria-label="Navegación principal">
     <a class="brand" routerLink="/trazabilidad" aria-label="Red Solidaria, inicio">
       <span class="brand-mark" aria-hidden="true">RS</span>
@@ -17,7 +17,11 @@
   <div class="page-shell">
     <header class="page-header">
       <span class="breadcrumb">Red Solidaria <span aria-hidden="true">/</span> Acceso</span>
-      <a class="org-login-link" routerLink="/trazabilidad">Volver a trazabilidad</a>
+      @if (authState() === 'authenticated' && basicAuthHasAdmin()) {
+        <a class="org-login-link" routerLink="/admin">Panel administrativo</a>
+      } @else {
+        <a class="org-login-link" routerLink="/trazabilidad">Volver a trazabilidad</a>
+      }
     </header>
 
     <section class="intro" aria-labelledby="page-title">
@@ -41,14 +45,18 @@
         <input id="organization-email" name="correo" type="text" [(ngModel)]="correo" required autocomplete="off" />
         <label for="organization-password">Contraseña</label>
         <input id="organization-password" name="contrasena" type="password" [(ngModel)]="contrasena" required autocomplete="off" />
-        <button type="submit">Validar acceso</button>
+        <button type="submit" [disabled]="authState() === 'pending'">Validar acceso</button>
       </form>
 
       @if (authState() === 'pending') {
         <div class="auth-status auth-pending" role="status">Validando credenciales con el backend…</div>
         <button type="button" class="secondary-button logout-button" (click)="cerrarSesion()">Cerrar sesión y limpiar credenciales</button>
       } @else if (authState() === 'authenticated') {
-        <div class="auth-status" role="status">El backend validó las credenciales mediante una operación protegida.</div>
+        @if (basicAuthHasAdmin()) {
+          <div class="auth-status" role="status">Acceso administrativo validado. Abriendo el panel...</div>
+        } @else {
+          <div class="alert" role="alert">Las credenciales son válidas, pero tu cuenta no tiene permiso de acceso administrativo.</div>
+        }
         <button type="button" class="secondary-button logout-button" (click)="cerrarSesion()">Cerrar sesión</button>
       } @else if (authState() === 'forbidden') {
         <div class="alert" role="alert">El usuario autenticado no tiene permisos suficientes para la operación solicitada.</div>
