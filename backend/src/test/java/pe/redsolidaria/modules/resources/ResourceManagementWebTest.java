@@ -18,6 +18,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import pe.redsolidaria.config.SecurityConfiguration;
@@ -37,8 +38,12 @@ class ResourceManagementWebTest {
 
     @Test
     void requiresAuthenticationToReadResourcesAndMeasurementUnits() throws Exception {
-        mvc.perform(get("/api/recursos")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/api/unidades-medida")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/recursos")).andExpect(status().isUnauthorized())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
+        mvc.perform(get("/api/unidades-medida")).andExpect(status().isUnauthorized())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
     }
 
     @Test

@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type BasicAuthState = 'signed-out' | 'pending' | 'authenticated' | 'invalid' | 'forbidden' | 'error';
+export type BasicAuthState = 'signed-out' | 'pending' | 'authenticated' | 'invalid' | 'forbidden' | 'error' | 'server-error';
 
 export interface AuthenticatedProfile {
   nombre: string;
@@ -70,6 +70,13 @@ export class BasicAuthService {
     if (this.credentials()) {
       this.currentProfile.set(null);
       this.currentState.set('error');
+    }
+  }
+
+  markServerError(): void {
+    if (this.credentials()) {
+      this.currentProfile.set(null);
+      this.currentState.set('server-error');
     }
   }
 

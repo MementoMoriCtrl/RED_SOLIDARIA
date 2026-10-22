@@ -19,6 +19,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
@@ -55,7 +56,9 @@ class DonationQueryAuthorizationWebTest {
                 .andExpect(jsonPath("$.emergenciaNombre").doesNotExist())
                 .andExpect(jsonPath("$.observaciones").doesNotExist())
                 .andExpect(jsonPath("$.movimientos[0].responsableNombre").doesNotExist())
-                .andExpect(jsonPath("$.movimientos[0].observaciones").doesNotExist());
+                .andExpect(jsonPath("$.movimientos[0].observaciones").doesNotExist())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
         verify(service).findPublicByTrackingCode("RS-TRACE-1");
     }
 
@@ -63,7 +66,9 @@ class DonationQueryAuthorizationWebTest {
     void doesNotMakeNestedDonationRoutesPublic() throws Exception {
         clearInvocations(service);
         mvc.perform(get("/api/donaciones/RS-TRACE-1/movimientos"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
         verifyNoInteractions(service);
     }
 

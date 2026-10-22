@@ -54,6 +54,8 @@ describe('OrganizationLoginPageComponent', () => {
     fixture.componentInstance.contrasena = 'wrong';
     fixture.componentInstance.continuar();
     http.expectOne('/api/auth/validate').flush({}, { status: 401, statusText: 'Unauthorized' });
+    http.expectNone('/api/auth/me');
+    http.expectNone('/api/auth/validate');
     fixture.detectChanges();
     expect(auth.state()).toBe('invalid');
     expect(auth.authorizationHeader()).toBeNull();
@@ -65,15 +67,28 @@ describe('OrganizationLoginPageComponent', () => {
     fixture.componentInstance.contrasena = 'test-password';
     fixture.componentInstance.continuar();
     http.expectOne('/api/auth/validate').flush({}, { status: 403, statusText: 'Forbidden' });
+    http.expectNone('/api/auth/me');
     fixture.detectChanges();
     expect(auth.state()).toBe('forbidden');
 
     fixture.componentInstance.contrasena = 'test-password';
     fixture.componentInstance.continuar();
     http.expectOne('/api/auth/validate').error(new ProgressEvent('error'));
+    http.expectNone('/api/auth/validate');
     fixture.detectChanges();
     expect(auth.state()).toBe('error');
     expect(fixture.nativeElement.textContent).toContain('No se pudo conectar');
+  });
+
+  it('reports server failures separately without retrying validation', () => {
+    fixture.componentInstance.correo = 'org@example.test';
+    fixture.componentInstance.contrasena = 'test-password';
+    fixture.componentInstance.continuar();
+    http.expectOne('/api/auth/validate').flush({}, { status: 500, statusText: 'Server Error' });
+    http.expectNone('/api/auth/validate');
+    fixture.detectChanges();
+    expect(auth.state()).toBe('server-error');
+    expect(fixture.nativeElement.textContent).toContain('El servidor no pudo completar la validación');
   });
 
   it('accepts valid credentials but does not open the panel without admin permission', () => {

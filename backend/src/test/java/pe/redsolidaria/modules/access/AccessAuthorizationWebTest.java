@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import pe.redsolidaria.config.SecurityConfiguration;
 import pe.redsolidaria.modules.access.api.AccessManagementController;
@@ -36,14 +37,18 @@ class AccessAuthorizationWebTest {
 
     @Test
     void rejectsUnauthenticatedRequests() throws Exception {
-        mvc.perform(get("/api/admin/usuarios")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/admin/usuarios")).andExpect(status().isUnauthorized())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
     }
 
     @Test
     void rejectsAuthenticatedUserWithoutAdminPermission() throws Exception {
         mvc.perform(get("/api/admin/usuarios")
                 .with(user("operador").authorities(new SimpleGrantedAuthority("DONACIONES_CONSULTAR"))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
     }
 
     @Test

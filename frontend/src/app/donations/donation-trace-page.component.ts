@@ -6,19 +6,17 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { DonationTrace } from './donation-trace.model';
 import { DonationTraceService } from './donation-trace.service';
-import { BasicAuthService } from '../auth/basic-auth.service';
+import { AppShellComponent } from '../shared/app-shell.component';
 
 @Component({
   selector: 'app-donation-trace-page',
   standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, RouterLink],
+  imports: [FormsModule, DatePipe, DecimalPipe, RouterLink, AppShellComponent],
   templateUrl: './donation-trace-page.component.html',
 })
 export class DonationTracePageComponent {
   private readonly donationTrace = inject(DonationTraceService);
-  private readonly auth = inject(BasicAuthService);
   private readonly changeDetector = inject(ChangeDetectorRef);
-  readonly isAdmin = () => this.auth.hasPermission('ACCESO_ADMINISTRAR');
 
   codigo = '';
   cargando = false;

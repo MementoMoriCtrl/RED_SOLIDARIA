@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 import { MeasurementUnit, ResourceItem, SaveResourceRequest } from './resource.model';
 import { ResourceApiService } from './resource-api.service';
-import { BasicAuthService } from '../auth/basic-auth.service';
+import { AppShellComponent } from '../shared/app-shell.component';
 
 interface ResourceForm {
   id: number | null;
@@ -18,15 +18,13 @@ interface ResourceForm {
 @Component({
   selector: 'app-resource-management-page',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, AppShellComponent],
   templateUrl: './resource-management-page.component.html',
   styleUrl: './resource-management-page.component.css',
 })
 export class ResourceManagementPageComponent implements OnInit {
   private readonly api = inject(ResourceApiService);
-  private readonly auth = inject(BasicAuthService);
   private readonly changeDetector = inject(ChangeDetectorRef);
-  readonly isAdmin = () => this.auth.hasPermission('ACCESO_ADMINISTRAR');
 
   resources: ResourceItem[] = [];
   units: MeasurementUnit[] = [];

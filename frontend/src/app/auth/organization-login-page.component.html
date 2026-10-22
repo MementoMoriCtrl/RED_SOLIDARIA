@@ -1,30 +1,5 @@
-﻿<main class="app-layout">
-  <aside class="sidebar" aria-label="Navegación principal">
-    <a class="brand" routerLink="/trazabilidad" aria-label="Red Solidaria, inicio">
-      <span class="brand-mark" aria-hidden="true">RS</span>
-      <span class="brand-copy"><strong>Red Solidaria</strong><small>Gestión y trazabilidad</small></span>
-    </a>
-    <p class="sidebar-label">MÓDULOS</p>
-    <nav class="side-nav" aria-label="Módulos disponibles">
-      <a class="nav-item" routerLink="/trazabilidad">
-        <span class="nav-icon" aria-hidden="true">T</span>
-        <span>Trazabilidad pública</span>
-      </a>
-    </nav>
-    <div class="sidebar-footer">Acceso privado<br />para organizaciones</div>
-  </aside>
-
-  <div class="page-shell">
-    <header class="page-header">
-      <span class="breadcrumb">Red Solidaria <span aria-hidden="true">/</span> Acceso</span>
-      @if (authState() === 'authenticated' && basicAuthHasAdmin()) {
-        <a class="org-login-link" routerLink="/admin">Panel administrativo</a>
-      } @else {
-        <a class="org-login-link" routerLink="/trazabilidad">Volver a trazabilidad</a>
-      }
-    </header>
-
-    <section class="intro" aria-labelledby="page-title">
+﻿<app-shell breadcrumb="Red Solidaria / Acceso" footerText="Acceso privado para organizaciones">
+  <section class="intro" aria-labelledby="page-title">
       <p class="eyebrow">ÁREA DE ORGANIZACIONES</p>
       <h1 id="page-title">Acceso privado</h1>
       <p class="intro-copy">La consulta pública está disponible sin cuenta. Esta pantalla prepara el acceso privado para operaciones que se incorporarán en una fase posterior.</p>
@@ -71,9 +46,12 @@
         <div class="alert" role="alert">No se pudo conectar con el servidor. Verifica la conexión e inténtalo de nuevo.</div>
       }
 
+      @if (authState() === 'server-error') {
+        <div class="alert" role="alert">El servidor no pudo completar la validación. Inténtalo de nuevo más tarde.</div>
+      }
+
       @if (error) {
         <div class="alert" role="alert">{{ error }}</div>
       }
     </section>
-  </div>
-</main>
+</app-shell>

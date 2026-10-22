@@ -15,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import pe.redsolidaria.config.SecurityConfiguration;
@@ -50,12 +51,17 @@ class AuthenticationValidationWebTest {
     @Test
     void rejectsInvalidHttpBasicCredentials() throws Exception {
         mvc.perform(get("/api/auth/validate").with(httpBasic("org@example.test", "incorrecta")))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
     }
 
     @Test
     void rejectsAnonymousRequest() throws Exception {
-        mvc.perform(get("/api/auth/validate")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/validate"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
     }
 
     @Test
@@ -97,7 +103,10 @@ class AuthenticationValidationWebTest {
 
     @Test
     void rejectsAnonymousProfileRequest() throws Exception {
-        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
     }
 
     @TestConfiguration

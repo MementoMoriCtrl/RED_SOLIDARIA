@@ -1,26 +1,6 @@
-<main class="app-layout">
-  <aside class="sidebar" aria-label="Navegación principal">
-    <a class="brand" routerLink="/trazabilidad" aria-label="Red Solidaria, inicio">
-      <span class="brand-mark" aria-hidden="true">RS</span>
-      <span class="brand-copy"><strong>Red Solidaria</strong><small>Gestión y trazabilidad</small></span>
-    </a>
-    <p class="sidebar-label">MÓDULOS</p>
-    <nav class="side-nav" aria-label="Módulos disponibles">
-      @if (isAdmin()) { <a class="nav-item" routerLink="/admin"><span class="nav-icon" aria-hidden="true">A</span><span>Panel administrativo</span></a> }
-      @if (isAdmin()) { <a class="nav-item" routerLink="/admin"><span class="nav-icon" aria-hidden="true">A</span><span>Panel administrativo</span></a> }
-      <a class="nav-item" routerLink="/trazabilidad"><span class="nav-icon" aria-hidden="true">T</span><span>Trazabilidad</span></a>
-      <a class="nav-item active" routerLink="/recursos" aria-current="page"><span class="nav-icon" aria-hidden="true">R</span><span>Recursos</span></a>
-    </nav>
-    <div class="sidebar-footer">Catálogo de recursos<br />Red Solidaria</div>
-  </aside>
-
-  <div class="page-shell">
-    <header class="page-header">
-      <span class="breadcrumb">Gestión <span aria-hidden="true">/</span> Recursos</span>
-      <a class="org-login-link" routerLink="/acceso-organizaciones">Acceso para organizaciones</a>
-    </header>
-
-    <section class="intro" aria-labelledby="page-title">
+﻿<app-shell breadcrumb="Gestión / Recursos" footerText="Catálogo de recursos">
+  <a shell-actions class="org-login-link" routerLink="/acceso-organizaciones">Acceso para organizaciones</a>
+  <section class="intro" aria-labelledby="page-title">
       <p class="eyebrow">MÓDULO 1 · FASE 2</p>
       <h1 id="page-title">Gestión de recursos</h1>
       <p class="intro-copy">Consulta y administra el catálogo de recursos y sus unidades de medida.</p>
@@ -107,5 +87,4 @@
         }
       </section>
     }
-  </div>
-</main>
+</app-shell>

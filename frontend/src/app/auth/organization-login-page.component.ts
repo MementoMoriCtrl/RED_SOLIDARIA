@@ -1,13 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { AuthenticatedProfile, BasicAuthService } from './basic-auth.service';
+import { AppShellComponent } from '../shared/app-shell.component';
 
 @Component({
   selector: 'app-organization-login-page',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, AppShellComponent],
   templateUrl: './organization-login-page.component.html',
 })
 export class OrganizationLoginPageComponent {
@@ -50,6 +51,7 @@ export class OrganizationLoginPageComponent {
   private handleAuthError(response: HttpErrorResponse): void {
     if (response.status === 401) this.basicAuth.rejectCredentials();
     else if (response.status === 403) this.basicAuth.markForbidden();
-    else this.basicAuth.markConnectionError();
+    else if (response.status === 0) this.basicAuth.markConnectionError();
+    else this.basicAuth.markServerError();
   }
 }

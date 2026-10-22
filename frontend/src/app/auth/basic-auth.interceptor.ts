@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { catchError, throwError } from 'rxjs';
 import { BasicAuthService } from './basic-auth.service';
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
@@ -19,7 +20,10 @@ export const basicAuthInterceptor: HttpInterceptorFn = (request, next) => {
     return next(request);
   }
 
-  return next(request.clone({ setHeaders: { Authorization: header } }));
+  return next(request.clone({ setHeaders: { Authorization: header } })).pipe(catchError((error: unknown) => {
+    if (error instanceof HttpErrorResponse && error.status === 401) auth.rejectCredentials();
+    return throwError(() => error);
+  }));
 };
 
 function isPublicDonationTraceRead(method: string, requestUrl: string, pageUrl: string): boolean {
