@@ -14,6 +14,18 @@ export const routes: Routes = [
       .then((module) => module.AdminDashboardPageComponent),
   },
   {
+    path: 'admin/donaciones',
+    canActivate: [administratorGuard],
+    loadComponent: () => import('./donations/donation-administration-page.component')
+      .then((module) => module.DonationAdministrationPageComponent),
+  },
+  {
+    path: 'admin/donaciones/:id',
+    canActivate: [administratorGuard],
+    loadComponent: () => import('./donations/donation-administration-detail-page.component')
+      .then((module) => module.DonationAdministrationDetailPageComponent),
+  },
+  {
     path: 'recursos',
     canActivate: [authenticatedGuard],
     loadComponent: () => import('./resources/resource-management-page.component')

@@ -1,0 +1,54 @@
+<app-shell breadcrumb="Administración / Donaciones" footerText="Gestión de donaciones">
+  <section class="intro" aria-labelledby="page-title">
+    <p class="eyebrow">MÓDULO 2 · FASE 2</p>
+    <h1 id="page-title">Gestión de donaciones</h1>
+    <p class="intro-copy">Consulta los registros, sus destinos y el estado actual.</p>
+  </section>
+
+  <form class="panel donation-filters" (ngSubmit)="load()">
+    <label>Buscar por código de trazabilidad
+      <input name="codigo" [(ngModel)]="codigo" maxlength="100" placeholder="Ej.: RS-…" autocomplete="off" />
+    </label>
+    <label>Filtrar por estado
+      <select name="estado" [(ngModel)]="estado">
+        <option value="">Todos los estados</option>
+        @for (state of ['REGISTRADA', 'RECIBIDA', 'ALMACENADA', 'CLASIFICADA', 'EN_TRANSITO', 'ENTREGADA', 'DEVUELTA', 'INCIDENCIA']; track state) {
+          <option [value]="state">{{ state }}</option>
+        }
+      </select>
+    </label>
+    <button class="primary-button" type="submit" [disabled]="loading">{{ loading ? 'Buscando…' : 'Buscar' }}</button>
+  </form>
+
+  @if (error) { <div class="alert" role="alert">{{ error }}</div> }
+  @if (loading) {
+    <section class="panel donation-load" role="status"><span class="spinner donation-spinner" aria-hidden="true"></span>Cargando donaciones…</section>
+  } @else if (!error && donations.length === 0) {
+    <section class="panel donation-empty" role="status">
+      <h2>No hay donaciones que coincidan</h2>
+      <p>Prueba con otro código o estado.</p>
+    </section>
+  } @else if (!error) {
+    <section class="panel donation-table-wrap" aria-label="Donaciones registradas">
+      <table class="donation-table">
+        <thead><tr><th>Código</th><th>Donante</th><th>Destino</th><th>Fecha</th><th>Estado</th><th><span class="sr-only">Acción</span></th></tr></thead>
+        <tbody>
+          @for (donation of donations; track donation.id) {
+            <tr>
+              <td class="tracking-code">{{ donation.codigoTrazabilidad }}</td>
+              <td>{{ donation.donante.nombre }}</td>
+              <td>
+                @if (donation.emergenciaNombre) { <span>Emergencia: {{ donation.emergenciaNombre }}</span> }
+                @if (donation.centroAcopio; as center) { <span>Centro: {{ center.nombre }}</span> }
+                @if (!donation.emergenciaNombre && !donation.centroAcopio) { <span>—</span> }
+              </td>
+              <td>{{ donation.fechaRegistro | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td><span class="donation-status">{{ donation.estado }}</span></td>
+              <td><a class="detail-link" [routerLink]="['/admin/donaciones', donation.id]">Ver detalle</a></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+</app-shell>

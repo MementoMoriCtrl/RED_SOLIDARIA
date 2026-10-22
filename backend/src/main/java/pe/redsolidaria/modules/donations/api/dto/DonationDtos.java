@@ -32,6 +32,12 @@ public final class DonationDtos {
                                    String donanteNombre, Long emergenciaId, Long centroAcopioId,
                                    List<DonationLineResponse> detalles) {}
 
+    public record AdministrativeDonationListItem(Long id, String codigoTrazabilidad,
+                                                 LocalDateTime fechaRegistro, String estado,
+                                                 DonorSummary donante, Long emergenciaId,
+                                                 String emergenciaNombre,
+                                                 CollectionCenterSummary centroAcopio) {}
+
     public record DonorSummary(Long id, String nombre) {}
     public record CollectionCenterSummary(Long id, String nombre, String ubicacion) {}
     public record DonationDetailSummary(Long recursoId, String recursoNombre, BigDecimal cantidadDonada,

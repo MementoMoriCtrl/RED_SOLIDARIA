@@ -16,6 +16,8 @@ describe('AppShellComponent', () => {
       imports: [AppShellComponent],
       providers: [provideRouter([
         { path: 'admin', component: EmptyPageComponent },
+        { path: 'admin/donaciones', component: EmptyPageComponent },
+        { path: 'admin/donaciones/:id', component: EmptyPageComponent },
         { path: 'recursos', component: EmptyPageComponent },
         { path: 'trazabilidad', component: EmptyPageComponent },
       ])],
@@ -32,13 +34,13 @@ describe('AppShellComponent', () => {
     fixture.detectChanges();
 
     const router = TestBed.inject(Router);
-    await router.navigateByUrl('/recursos');
+    await router.navigateByUrl('/admin/donaciones/3');
     fixture.detectChanges();
 
-    for (const path of ['/admin', '/recursos', '/trazabilidad']) {
+    for (const path of ['/admin', '/admin/donaciones', '/recursos', '/trazabilidad']) {
       expect(fixture.nativeElement.querySelectorAll(`.side-nav a[href="${path}"]`).length).toBe(1);
     }
-    const active = fixture.nativeElement.querySelector('.side-nav a[href="/recursos"]');
+    const active = fixture.nativeElement.querySelector('.side-nav a[href="/admin/donaciones"]');
     expect(active.classList.contains('active')).toBe(true);
     expect(active.getAttribute('aria-current')).toBe('page');
   });
@@ -51,6 +53,7 @@ describe('AppShellComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelectorAll('.side-nav a[href="/admin"]').length).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('.side-nav a[href="/admin/donaciones"]').length).toBe(0);
     expect(fixture.nativeElement.querySelectorAll('.side-nav a[href="/recursos"]').length).toBe(1);
     expect(fixture.nativeElement.querySelectorAll('.side-nav a[href="/trazabilidad"]').length).toBe(1);
   });

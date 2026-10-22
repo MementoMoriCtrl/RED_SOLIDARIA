@@ -1,0 +1,45 @@
+:host { display: block; min-height: 100vh; }
+.donation-filters { display: grid; grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) auto; align-items: end; gap: .85rem; }
+.donation-filters label { display: grid; gap: .45rem; color: #475569; font-size: .76rem; font-weight: 700; }
+.donation-filters input, .donation-filters select { width: 100%; min-height: 43px; padding: .65rem .75rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: .86rem; }
+.primary-button { min-height: 42px; padding: .6rem .9rem; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; cursor: pointer; font: inherit; font-size: .8rem; font-weight: 700; }
+.primary-button:disabled { cursor: not-allowed; opacity: .58; }
+.donation-table-wrap { margin-top: 1rem; overflow-x: auto; padding: 0; }
+.donation-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .82rem; }
+.donation-table th, .donation-table td { padding: .9rem 1rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.donation-table th { color: #64748b; font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
+.donation-table tbody tr:last-child td { border-bottom: 0; }
+.donation-table td:nth-child(3) span { display: block; white-space: normal; }
+.tracking-code { color: var(--navy); font-weight: 750; }
+.donation-status { display: inline-flex; padding: .3rem .55rem; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: .68rem; font-weight: 750; }
+.detail-link { color: var(--blue-hover); font-weight: 700; text-decoration: none; }
+.detail-link:hover { text-decoration: underline; }
+.donation-load, .donation-empty { display: flex; align-items: center; gap: .7rem; margin-top: 1rem; color: var(--muted); font-size: .86rem; }
+.donation-empty { display: block; }
+.donation-empty h2 { margin-bottom: .4rem; color: var(--navy); }
+.donation-empty p { margin: 0; font-size: .84rem; }
+.donation-spinner { flex: 0 0 auto; border-color: #bfdbfe; border-top-color: var(--blue); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+@media (max-width: 720px) { .donation-filters { grid-template-columns: 1fr; } .donation-filters .primary-button { width: 100%; } }
+.back-link { display: inline-block; margin-bottom: 1rem; color: var(--blue-hover); font-size: .84rem; font-weight: 700; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.admin-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.admin-detail-card { min-width: 0; }
+.admin-detail-card h2 { margin: .35rem 0; color: var(--navy); font-size: 1rem; overflow-wrap: anywhere; }
+.admin-detail-card p:not(.eyebrow), .muted-copy { margin: .25rem 0 0; color: var(--muted); font-size: .82rem; }
+.admin-detail-section { margin-top: 1rem; }
+.detail-lines { display: grid; gap: .6rem; }
+.detail-line { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 0; border-bottom: 1px solid var(--border); }
+.detail-line:last-child { border-bottom: 0; }
+.detail-line h3 { margin: 0; color: var(--navy); font-size: .9rem; }
+.detail-line p { margin: .25rem 0 0; color: var(--muted); font-size: .78rem; }
+.detail-line dl { display: flex; gap: 1.2rem; margin: 0; }
+.detail-line dl div { text-align: right; }
+.detail-line dt { color: var(--muted); font-size: .7rem; }
+.detail-line dd { margin: .15rem 0 0; color: var(--navy); font-size: .86rem; font-weight: 700; }
+.admin-observations { margin: 1rem 0 0; padding-top: .8rem; border-top: 1px solid var(--border); color: #475569; font-size: .84rem; white-space: pre-wrap; }
+.movement-list { display: grid; gap: .5rem; margin: 0; padding-left: 1.2rem; }
+.movement-list li { padding-left: .25rem; color: var(--blue); }
+.movement-list li div { color: var(--text); }
+.movement-list p { margin: .3rem 0 0; color: var(--muted); font-size: .8rem; white-space: pre-wrap; }
+@media (max-width: 720px) { .admin-detail-grid { grid-template-columns: 1fr; } .detail-line { align-items: flex-start; flex-direction: column; } .detail-line dl { width: 100%; justify-content: flex-start; text-align: left; } .detail-line dl div { text-align: left; } }

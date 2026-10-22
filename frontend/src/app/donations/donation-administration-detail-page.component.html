@@ -1,0 +1,59 @@
+<app-shell breadcrumb="Administración / Donaciones / Detalle" footerText="Gestión de donaciones">
+  <a class="back-link" routerLink="/admin/donaciones">← Volver al listado</a>
+  @if (loading) {
+    <section class="panel donation-load" role="status"><span class="spinner donation-spinner" aria-hidden="true"></span>Cargando detalle de donación…</section>
+  } @else if (error) {
+    <div class="alert" role="alert">{{ error }}</div>
+  } @else if (donation; as item) {
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">DETALLE ADMINISTRATIVO</p>
+      <h1 id="page-title">Donación {{ item.codigoTrazabilidad }}</h1>
+      <p class="intro-copy">Registrada el {{ item.fechaRegistro | date:'dd/MM/yyyy HH:mm' }} · Estado: <strong>{{ item.estado }}</strong></p>
+    </section>
+
+    <section class="admin-detail-grid" aria-label="Información de la donación">
+      <article class="panel admin-detail-card">
+        <p class="eyebrow">DONANTE</p><h2>{{ item.donante.nombre }}</h2><p>Identificador {{ item.donante.id }}</p>
+      </article>
+      <article class="panel admin-detail-card">
+        <p class="eyebrow">DESTINO</p>
+        @if (item.emergenciaNombre) { <h2>{{ item.emergenciaNombre }}</h2><p>Emergencia · ID {{ item.emergenciaId }}</p> }
+        @if (item.centroAcopio; as center) { <h2>{{ center.nombre }}</h2><p>{{ center.ubicacion || 'Ubicación no indicada' }}</p> }
+      </article>
+      <article class="panel admin-detail-card">
+        <p class="eyebrow">FECHA DE INGRESO</p><h2>{{ item.fechaIngreso ? (item.fechaIngreso | date:'dd/MM/yyyy HH:mm') : 'Pendiente' }}</h2>
+      </article>
+    </section>
+
+    <section class="panel admin-detail-section">
+      <div class="section-heading"><div><p class="eyebrow">CONTENIDO</p><h2>Recursos donados</h2></div></div>
+      @if (item.detalles.length === 0) { <p class="muted-copy">La donación no contiene detalles.</p> }
+      @else {
+        <div class="detail-lines">
+          @for (line of item.detalles; track line.recursoId) {
+            <article class="detail-line">
+              <div><h3>{{ line.recursoNombre }}</h3><p>{{ line.unidadNombre }}{{ line.unidadSimbolo ? ' · ' + line.unidadSimbolo : '' }}</p></div>
+              <dl><div><dt>Donada</dt><dd>{{ line.cantidadDonada | number:'1.0-3' }}</dd></div><div><dt>Recibida</dt><dd>{{ line.cantidadRecibidaAcopio | number:'1.0-3' }}</dd></div></dl>
+            </article>
+          }
+        </div>
+      }
+      @if (item.observaciones) { <p class="admin-observations"><strong>Observaciones:</strong> {{ item.observaciones }}</p> }
+    </section>
+
+    <section class="panel admin-detail-section">
+      <div class="section-heading"><div><p class="eyebrow">HISTORIAL</p><h2>Movimientos</h2></div></div>
+      @if (item.movimientos.length === 0) { <p class="muted-copy">No hay movimientos registrados.</p> }
+      @else {
+        <ol class="movement-list">
+          @for (movement of item.movimientos; track movement.fechaHora + movement.estadoNuevo) {
+            <li><div><strong>{{ movement.estadoAnterior || 'Inicio' }} → {{ movement.estadoNuevo }}</strong><p>{{ movement.fechaHora | date:'dd/MM/yyyy HH:mm' }}{{ movement.ubicacion ? ' · ' + movement.ubicacion : '' }}</p>
+              @if (movement.responsableNombre) { <p>Responsable: {{ movement.responsableNombre }}</p> }
+              @if (movement.observaciones) { <p>{{ movement.observaciones }}</p> }
+            </div></li>
+          }
+        </ol>
+      }
+    </section>
+  }
+</app-shell>

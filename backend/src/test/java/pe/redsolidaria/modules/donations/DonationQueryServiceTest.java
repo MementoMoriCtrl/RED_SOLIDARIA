@@ -1,8 +1,9 @@
-package pe.redsolidaria.modules.donations;
+﻿package pe.redsolidaria.modules.donations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,12 +57,13 @@ class DonationQueryServiceTest {
         UserAccount responsible = mock(UserAccount.class);
 
         when(donations.findByCodigoTrazabilidad("RS-TRACE-1")).thenReturn(Optional.of(donation));
+        when(donations.findAdministrativeById(31L)).thenReturn(Optional.of(donation));
         when(donation.getId()).thenReturn(31L);
         when(donation.getCodigoTrazabilidad()).thenReturn("RS-TRACE-1");
         when(donation.getFechaRegistro()).thenReturn(registeredAt);
         when(donation.getFechaIngreso()).thenReturn(registeredAt);
         when(donation.getEstado()).thenReturn("REGISTRADA");
-        when(donation.getObservaciones()).thenReturn("Recepción inicial");
+        when(donation.getObservaciones()).thenReturn("RecepciÃ³n inicial");
         when(donation.getDonante()).thenReturn(donor);
         when(donor.getId()).thenReturn(8L);
         when(donor.getNombre()).thenReturn("Donante de prueba");
@@ -88,10 +90,10 @@ class DonationQueryServiceTest {
         when(movement.getEstadoNuevo()).thenReturn("REGISTRADA");
         when(movement.getFechaHora()).thenReturn(movedAt);
         when(movement.getUbicacion()).thenReturn("Miraflores");
-        when(movement.getObservaciones()).thenReturn("Recepción inicial");
+        when(movement.getObservaciones()).thenReturn("RecepciÃ³n inicial");
         when(movement.getResponsable()).thenReturn(responsible);
         when(responsible.getNombre()).thenReturn("Ana");
-        when(responsible.getApellido()).thenReturn("Pérez");
+        when(responsible.getApellido()).thenReturn("PÃ©rez");
         when(laterMovement.getEstadoAnterior()).thenReturn("REGISTRADA");
         when(laterMovement.getEstadoNuevo()).thenReturn("RECIBIDA");
         when(laterMovement.getFechaHora()).thenReturn(movedAt.plusMinutes(10));
@@ -108,7 +110,7 @@ class DonationQueryServiceTest {
         assertEquals("REGISTRADA", response.movimientos().getFirst().estadoNuevo());
         assertEquals(movedAt, response.movimientos().getFirst().fechaHora());
         assertEquals("RECIBIDA", response.movimientos().get(1).estadoNuevo());
-        assertEquals("Ana Pérez", response.movimientos().getFirst().responsableNombre());
+        assertEquals("Ana PÃ©rez", response.movimientos().getFirst().responsableNombre());
         verify(movements).findAllByDonacion_IdOrderByFechaHoraAscIdAsc(31L);
 
         var publicResponse = service.findPublicByTrackingCode("RS-TRACE-1");
@@ -119,6 +121,13 @@ class DonationQueryServiceTest {
         assertFalse(publicResponse.toString().contains("Donante de prueba"));
         assertFalse(publicResponse.toString().contains("Ana"));
         assertFalse(publicResponse.toString().contains("Recepci"));
+
+        var adminResponse = service.findAdministrativeById(31L);
+        assertEquals(31L, adminResponse.id());
+        assertEquals("Donante de prueba", adminResponse.donante().nombre());
+        assertEquals("Emergencia norte", adminResponse.emergenciaNombre());
+        assertEquals(donation.getObservaciones(), adminResponse.observaciones());
+        assertTrue(adminResponse.movimientos().getFirst().responsableNombre().startsWith("Ana"));
     }
 
     @Test
@@ -129,5 +138,28 @@ class DonationQueryServiceTest {
                 () -> service.findByTrackingCode("RS-MISSING"));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+    }
+
+    @Test
+    void appliesAdministrativeCodeAndStateFiltersAndRejectsUnknownStates() {
+        when(donations.findAdministrativeList("RS-TRACE", "REGISTRADA")).thenReturn(List.of());
+        assertEquals(List.of(), service.listAdministrative(" RS-TRACE ", " registrada "));
+        verify(donations).findAdministrativeList("RS-TRACE", "REGISTRADA");
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> service.listAdministrative(null, "DESCONOCIDO"));
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    }
+
+    @Test
+    void validatesAdministrativeIdentifierAndReturnsNotFoundForMissingDonation() {
+        ResponseStatusException invalid = assertThrows(ResponseStatusException.class,
+                () -> service.findAdministrativeById(0L));
+        assertEquals(HttpStatus.BAD_REQUEST, invalid.getStatusCode());
+
+        when(donations.findAdministrativeById(404L)).thenReturn(Optional.empty());
+        ResponseStatusException missing = assertThrows(ResponseStatusException.class,
+                () -> service.findAdministrativeById(404L));
+        assertEquals(HttpStatus.NOT_FOUND, missing.getStatusCode());
     }
 }
