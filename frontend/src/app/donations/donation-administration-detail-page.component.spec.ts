@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { basicAuthInterceptor } from '../auth/basic-auth.interceptor';
+import { BasicAuthService } from '../auth/basic-auth.service';
 import { DonationAdministrationDetailPageComponent } from './donation-administration-detail-page.component';
 
 describe('DonationAdministrationDetailPageComponent', () => {
@@ -21,6 +22,9 @@ describe('DonationAdministrationDetailPageComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(DonationAdministrationDetailPageComponent);
     http = TestBed.inject(HttpTestingController);
+    const auth = TestBed.inject(BasicAuthService);
+    auth.provideCredentials('admin', 'memory-only');
+    auth.markAuthenticated({ nombre: 'Admin', apellido: 'Test', correo: 'admin@example.test', rolCodigo: 'ADMIN', rolNombre: 'Admin', permisos: ['ACCESO_ADMINISTRAR'] });
     fixture.autoDetectChanges();
   });
 
@@ -52,4 +56,44 @@ describe('DonationAdministrationDetailPageComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Cargando detalle');
     expect(fixture.nativeElement.textContent).toContain('No encontramos la donación solicitada');
   });
+
+  it('submits a partial receipt, stops saving, and reloads the donation after success', async () => {
+    http.expectOne('/api/donaciones/administracion/42').flush(donationResponse(0));
+    await fixture.whenStable();
+    fixture.componentInstance.setReceiptAmount(9, '2.5');
+    fixture.componentInstance.receiptLocation = 'Centro Norte';
+    fixture.componentInstance.submitReceipt();
+    expect(fixture.componentInstance.savingReceipt).toBe(true);
+    const post = http.expectOne('/api/donaciones/administracion/42/recepciones');
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body.detalles).toEqual([{ recursoId: 9, cantidad: 2.5 }]);
+    post.flush({ donacionId: 42, estado: 'REGISTRADA' });
+    http.expectOne('/api/donaciones/administracion/42').flush(donationResponse(2.5));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.savingReceipt).toBe(false);
+    expect(fixture.componentInstance.receiptSuccess).toContain('correctamente');
+    expect(fixture.componentInstance.donation?.detalles[0].cantidadRecibidaAcopio).toBe(2.5);
+  });
+
+  it('stops saving and displays a validation error when a receipt fails', async () => {
+    http.expectOne('/api/donaciones/administracion/42').flush(donationResponse(0));
+    await fixture.whenStable();
+    fixture.componentInstance.setReceiptAmount(9, '12');
+    fixture.componentInstance.submitReceipt();
+    http.expectOne('/api/donaciones/administracion/42/recepciones').flush(
+      { detail: 'La cantidad supera lo pendiente' }, { status: 400, statusText: 'Bad Request' });
+    await fixture.whenStable();
+    expect(fixture.componentInstance.savingReceipt).toBe(false);
+    expect(fixture.componentInstance.receiptError).toContain('cantidad supera');
+  });
+
+  function donationResponse(received: number) {
+    return {
+      id: 42, codigoTrazabilidad: 'RS-42', fechaRegistro: '2026-04-02T10:00:00', fechaIngreso: null,
+      estado: 'REGISTRADA', observaciones: null, donante: { id: 4, nombre: 'Donante' },
+      emergenciaId: null, emergenciaNombre: null, centroAcopio: null,
+      detalles: [{ recursoId: 9, recursoNombre: 'Arroz Blanco', cantidadDonada: 10, cantidadRecibidaAcopio: received,
+        unidadCodigo: 'KG', unidadNombre: 'Kilogramo', unidadSimbolo: 'kg' }], movimientos: [],
+    };
+  }
 });

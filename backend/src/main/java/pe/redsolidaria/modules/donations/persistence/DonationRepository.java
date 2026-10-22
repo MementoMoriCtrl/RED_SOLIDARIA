@@ -5,10 +5,15 @@ import java.util.List;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 import pe.redsolidaria.modules.donations.domain.Donation;
 
 public interface DonationRepository extends JpaRepository<Donation, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from Donation d where d.id = :id")
+    Optional<Donation> findByIdForUpdate(@Param("id") Long id);
     boolean existsByCodigoTrazabilidad(String codigoTrazabilidad);
 
     @EntityGraph(attributePaths = {

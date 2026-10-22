@@ -39,6 +39,12 @@ export interface AdministrativeDonationDetail {
   }>;
 }
 
+export interface RegisterDonationReceiptRequest {
+  detalles: Array<{ recursoId: number; cantidad: number }>;
+  ubicacion: string;
+  observaciones: string;
+}
+
 export interface AdministrativeDonationFilters {
   codigo?: string;
   estado?: string;

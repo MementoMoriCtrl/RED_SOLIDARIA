@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AdministrativeDonationDetail, AdministrativeDonationFilters, AdministrativeDonationListItem } from './donation-admin.model';
+import { AdministrativeDonationDetail, AdministrativeDonationFilters, AdministrativeDonationListItem, RegisterDonationReceiptRequest } from './donation-admin.model';
 
 @Injectable({ providedIn: 'root' })
 export class DonationAdminService {
@@ -17,5 +17,9 @@ export class DonationAdminService {
 
   findById(id: number): Observable<AdministrativeDonationDetail> {
     return this.http.get<AdministrativeDonationDetail>(`${this.endpoint}/${id}`);
+  }
+
+  registerReceipt(id: number, request: RegisterDonationReceiptRequest): Observable<unknown> {
+    return this.http.post(`${this.endpoint}/${id}/recepciones`, request);
   }
 }

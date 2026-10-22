@@ -64,6 +64,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/donaciones/{codigoTrazabilidad}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donaciones/administracion/**")
                         .hasAuthority("ACCESO_ADMINISTRAR")
+                        .requestMatchers(HttpMethod.POST, "/api/donaciones/administracion/**")
+                        .hasAuthority("ACCESO_ADMINISTRAR")
                         .requestMatchers(HttpMethod.GET, "/api/donaciones/**")
                         .hasAnyAuthority("DONACION_REGISTRAR", "ACCESO_ADMINISTRAR")
                         .requestMatchers(HttpMethod.POST, "/api/donaciones").hasAuthority("DONACION_REGISTRAR")

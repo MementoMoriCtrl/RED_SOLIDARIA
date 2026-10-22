@@ -17,4 +17,21 @@ public class AuditRecord {
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "datos_anteriores", columnDefinition = "json") private String datosAnteriores;
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "datos_nuevos", columnDefinition = "json") private String datosNuevos;
     protected AuditRecord() {}
+    public AuditRecord(UserAccount usuario, String entidad, String idRegistro, String accion,
+                       String datosAnteriores, String datosNuevos) {
+        this.usuario = java.util.Objects.requireNonNull(usuario);
+        this.entidad = java.util.Objects.requireNonNull(entidad);
+        this.idRegistro = java.util.Objects.requireNonNull(idRegistro);
+        this.accion = java.util.Objects.requireNonNull(accion);
+        this.datosAnteriores = datosAnteriores;
+        this.datosNuevos = datosNuevos;
+    }
+    public Long getId() { return id; }
+    public UserAccount getUsuario() { return usuario; }
+    public String getEntidad() { return entidad; }
+    public String getIdRegistro() { return idRegistro; }
+    public String getAccion() { return accion; }
+    public LocalDateTime getFechaHora() { return fechaHora; }
+    public String getDatosAnteriores() { return datosAnteriores; }
+    public String getDatosNuevos() { return datosNuevos; }
 }

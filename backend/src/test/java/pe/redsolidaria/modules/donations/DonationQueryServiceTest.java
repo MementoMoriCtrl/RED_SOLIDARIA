@@ -1,4 +1,4 @@
-﻿package pe.redsolidaria.modules.donations;
+package pe.redsolidaria.modules.donations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

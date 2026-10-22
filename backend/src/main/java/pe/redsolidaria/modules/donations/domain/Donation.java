@@ -50,4 +50,8 @@ public class Donation {
     public String getObservaciones() { return observaciones; }
     public List<DonationLine> getDetalles() { return detalles; }
     public List<DonationMovement> getMovimientos() { return movimientos; }
+    public void marcarRecibida() {
+        if (!"REGISTRADA".equals(estado)) throw new IllegalStateException("Estado incompatible con recepción");
+        estado = "RECIBIDA";
+    }
 }

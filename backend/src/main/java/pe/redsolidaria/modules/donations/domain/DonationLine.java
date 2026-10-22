@@ -30,4 +30,11 @@ public class DonationLine {
     public Resource getRecurso() { return recurso; }
     public BigDecimal getCantidadDonada() { return cantidadDonada; }
     public BigDecimal getCantidadRecibidaAcopio() { return cantidadRecibidaAcopio; }
+    public void recibir(BigDecimal cantidad) {
+        if (cantidad == null || cantidad.signum() <= 0 || cantidad.scale() > 3
+                || cantidadRecibidaAcopio.add(cantidad).compareTo(cantidadDonada) > 0) {
+            throw new IllegalArgumentException("La cantidad recibida no es válida para el detalle");
+        }
+        cantidadRecibidaAcopio = cantidadRecibidaAcopio.add(cantidad).setScale(3);
+    }
 }
