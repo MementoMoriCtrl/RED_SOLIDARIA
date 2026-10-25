@@ -16,7 +16,11 @@ public final class DonationReceiptDtos {
     public record ReceiptLineRequest(@NotNull @Positive Long recursoId,
             @NotNull @DecimalMin("0.001") @Digits(integer = 11, fraction = 3) BigDecimal cantidad) {}
     public record RegisterReceiptRequest(@NotEmpty List<@Valid ReceiptLineRequest> detalles,
-            @Size(max = 200) String ubicacion, String observaciones) {}
+            @Size(max = 200) String ubicacion, String observaciones, @NotNull java.util.UUID operacionId) {
+        public RegisterReceiptRequest(List<ReceiptLineRequest> detalles, String ubicacion, String observaciones) {
+            this(detalles, ubicacion, observaciones, java.util.UUID.randomUUID());
+        }
+    }
     public record ReceiptLineResult(Long recursoId, String recursoNombre, BigDecimal cantidadRecibidaOperacion,
             BigDecimal cantidadRecibidaAcumulada, BigDecimal cantidadPendiente) {}
     public record RegisterReceiptResponse(Long donacionId, String estado, LocalDateTime fechaHora,

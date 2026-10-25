@@ -15,4 +15,21 @@ public class AffectedZone {
     @Column(name = "creado_en", insertable = false, updatable = false) private LocalDateTime creadoEn;
     @OneToMany(mappedBy = "zona") private List<pe.redsolidaria.modules.needs.domain.Need> necesidades = new ArrayList<>();
     protected AffectedZone() {}
+    public AffectedZone(Emergency emergencia, String nombre, String ubicacion, String descripcion) {
+        this.emergencia = emergencia;
+        this.nombre = nombre;
+        this.ubicacion = ubicacion;
+        this.descripcion = descripcion;
+    }
+    public void actualizar(String nombre, String ubicacion, String descripcion) {
+        this.nombre = nombre;
+        this.ubicacion = ubicacion;
+        this.descripcion = descripcion;
+    }
+    public Long getId() { return id; }
+    public Emergency getEmergencia() { return emergencia; }
+    public String getNombre() { return nombre; }
+    public String getUbicacion() { return ubicacion; }
+    public String getDescripcion() { return descripcion; }
+    public LocalDateTime getCreadoEn() { return creadoEn; }
 }

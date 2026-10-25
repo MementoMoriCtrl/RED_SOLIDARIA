@@ -10,6 +10,8 @@ public final class ResourceDtos {
     private ResourceDtos() {}
 
     public record MeasurementUnitResponse(Long id, String codigo, String nombre, String simbolo) {}
+    public record CreateMeasurementUnitRequest(@NotBlank @Pattern(regexp = "[A-Za-z0-9_-]{1,30}") String codigo,
+            @NotBlank @Size(max = 80) String nombre, @Size(max = 20) String simbolo) {}
 
     public record ResourceResponse(Long id, String nombre, String categoria, String descripcion,
                                    String estado, MeasurementUnitResponse unidadMedida) {}

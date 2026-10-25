@@ -15,3 +15,9 @@ export const administratorGuard: CanActivateFn = () => {
     ? true
     : inject(Router).createUrlTree(['/acceso-organizaciones']);
 };
+
+export const donationRegistrationGuard: CanActivateFn = () => {
+  const auth = inject(BasicAuthService);
+  return auth.state() === 'authenticated' && auth.hasCredentials() && auth.hasPermission('DONACION_REGISTRAR')
+    ? true : inject(Router).createUrlTree(['/acceso-organizaciones']);
+};

@@ -12,6 +12,9 @@ public class MeasurementUnit {
     @Column(length = 20) private String simbolo;
     @OneToMany(mappedBy = "unidadMedida") private List<Resource> recursos = new ArrayList<>();
     protected MeasurementUnit() {}
+    public MeasurementUnit(String codigo, String nombre, String simbolo) {
+        this.codigo = codigo; this.nombre = nombre; this.simbolo = simbolo;
+    }
     public Long getId() { return id; }
     public String getCodigo() { return codigo; }
     public String getNombre() { return nombre; }

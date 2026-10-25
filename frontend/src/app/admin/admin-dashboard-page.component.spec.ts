@@ -52,7 +52,7 @@ describe('AdminDashboardPageComponent', () => {
     http.expectOne('/api/auth/me').flush({ nombre: 'Ana', apellido: 'Admin', correo: 'admin@example.test',
       rolCodigo: 'ADMINISTRADOR', rolNombre: 'Administrador', permisos: ['ACCESO_ADMINISTRAR'] });
     await fixture.whenStable();
-    fixture.componentInstance.cerrarSesion();
+    fixture.nativeElement.querySelector('.header-session-button').click();
     await fixture.whenStable();
     expect(auth.state()).toBe('signed-out');
     expect(auth.authorizationHeader()).toBeNull();

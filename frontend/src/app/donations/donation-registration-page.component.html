@@ -1,0 +1,145 @@
+<app-shell [breadcrumb]="isCatalogPage ? 'Administración / Catálogos de donaciones' : 'Donaciones / Registro'" [footerText]="isCatalogPage ? 'Catálogos de donaciones' : 'Registro de donaciones'">
+  <header class="donation-intro">
+    <p class="donation-eyebrow">{{ isCatalogPage ? 'ADMINISTRACIÓN' : 'DONACIONES' }}</p>
+    <h1>{{ isCatalogPage ? 'Catálogos de donaciones' : 'Registro de donaciones' }}</h1>
+    <p class="donation-description">{{ isCatalogPage ? 'Consulta y administra los datos que acompañan cada donación.' : 'Registra los recursos donados, su donante y el destino de la ayuda.' }}</p>
+    <div class="donation-toolbar" role="group" aria-label="Acciones de donaciones">
+      @if (!isCatalogPage && canManageCatalogs) {
+        <a routerLink="/admin/catalogos-donaciones">Administrar donantes, centros de acopio y unidades de medida <span aria-hidden="true">→</span></a>
+      }
+      @if (isCatalogPage && canRegister) {
+        <a routerLink="/donaciones/registro"><span aria-hidden="true">←</span> Registrar una donación</a>
+      }
+      <button type="button" [disabled]="loading || saving" (click)="load()">Recargar catálogos</button>
+    </div>
+  </header>
+  @if (error) { <div class="alert donation-message" role="alert">{{ error }}</div> }
+  @if (success) { <p class="donation-message donation-success" role="status">{{ success }}</p> }
+  @if (loading) { <p class="donation-message donation-loading" role="status">Cargando catálogos…</p> }
+  @else {
+    @if (!isCatalogPage && canRegister) {
+      <section class="panel donation-panel" aria-labelledby="new-donation-title">
+        <div class="donation-section-heading"><h2 id="new-donation-title">Nueva donación</h2><p>Completa el donante, el destino y los recursos. Los campos con * son obligatorios.</p></div>
+        <p class="donation-notice">Registrar una donación no registra su recepción en acopio ni su entrega a la población.</p>
+        <form #donationForm="ngForm" (ngSubmit)="register()">
+          <fieldset class="donation-fields" [disabled]="saving || !!created || registrationUnconfirmed">
+            <legend class="donation-sr-only">Datos de la donación</legend>
+            <div class="donation-destination-grid">
+              @for (kind of kinds; track kind) {
+                <div class="donation-selector" [attr.aria-busy]="catalogLoading[kind]">
+                  <label [for]="'filter-' + kind">{{ kind === 'donantes' ? 'Donante *' : kind === 'centros' ? 'Centro de acopio' : 'Emergencia' }}</label>
+                  <input [id]="'filter-' + kind" [name]="'filter-' + kind" [ngModel]="searchText[kind]" (ngModelChange)="filterSelector(kind, $event)" [ngModelOptions]="{ standalone: true }" maxlength="150" placeholder="Escribe para buscar por nombre" [attr.aria-describedby]="'state-' + kind" />
+                  <label class="donation-sr-only" [for]="'select-' + kind">Seleccionar {{ kind === 'donantes' ? 'donante' : kind === 'centros' ? 'centro de acopio' : 'emergencia' }}</label>
+                  <select [id]="'select-' + kind" [name]="kind === 'donantes' ? 'donor' : kind === 'centros' ? 'center' : 'emergency'" [ngModel]="selectedId(kind)" (ngModelChange)="selectCatalog(kind, $event)" [required]="kind === 'donantes'" [disabled]="catalogLoading[kind] || !!catalogErrors[kind]">
+                    <option [ngValue]="null">{{ kind === 'donantes' ? 'Selecciona donante' : kind === 'centros' ? 'Sin centro' : 'Sin emergencia' }}</option>
+                    @for (item of catalogs[kind].content; track item.id) { <option [ngValue]="item.id">{{ item.nombre }} · ID {{ item.id }}{{ item.ubicacion ? ' — ' + item.ubicacion : '' }}</option> }
+                  </select>
+                  <div [id]="'state-' + kind" class="donation-help" role="status">
+                    @if (catalogLoading[kind]) { Buscando… }
+                    @else if (catalogErrors[kind]) { <span class="donation-field-error">{{ catalogErrors[kind] }}</span> }
+                    @else if (!catalogs[kind].content.length) { No hay resultados. Prueba con otro nombre. }
+                    @else { {{ catalogs[kind].content.length }} opciones cargadas. }
+                  </div>
+                  <div class="donation-selector-actions">
+                    @if (catalogErrors[kind]) { <button type="button" (click)="search(kind)">Reintentar</button> }
+                    @else if (catalogs[kind].page + 1 < catalogs[kind].totalPages) { <button type="button" [disabled]="catalogLoading[kind]" (click)="search(kind, true)">Cargar más</button> }
+                    @if (canManageCatalogs && kind !== 'emergencias') { <a routerLink="/admin/catalogos-donaciones">¿No lo encuentras? Administrar catálogos</a> }
+                    @if (canManageCatalogs && kind === 'emergencias') { <a routerLink="/admin/emergencias">Gestión de emergencias</a> }
+                  </div>
+                </div>
+              }
+            </div>
+            <p class="donation-help">Selecciona al menos una emergencia o un centro. Para asignar posteriormente a necesidades, la donación debe tener emergencia.</p>
+            <div class="donation-resources">
+              <h3>Recursos donados</h3>
+              @for (line of lines; track $index; let index = $index) {
+                <div class="donation-resource-row">
+                  <label>Recurso {{ index + 1 }} *<select [name]="'resource' + index" [(ngModel)]="line.recursoId" required><option [ngValue]="null">Selecciona recurso</option>
+                    @for (item of resources; track item.id) { <option [ngValue]="item.id">{{ item.nombre }} / {{ item.unidadMedida.codigo }}</option> }</select></label>
+                  <label>Cantidad donada *<input [name]="'quantity' + index" type="number" [(ngModel)]="line.cantidad" min="0.001" max="99999999999.999" step="0.001" required /><span class="donation-help">Hasta 3 decimales.</span></label>
+                  <button class="donation-remove" type="button" [attr.aria-label]="'Quitar recurso ' + (index + 1)" [disabled]="lines.length === 1" (click)="lines.splice(index, 1)">Quitar recurso</button>
+                </div>
+              }
+              @if (resources.length === 0) { <p class="donation-empty">No hay recursos activos. Solicita su registro al administrador.</p> }
+              <button type="button" (click)="lines.push({ recursoId: null, cantidad: null })">Añadir recurso</button>
+            </div>
+            <div class="donation-form-grid">
+              <label>Ubicación<input name="location" [(ngModel)]="location" maxlength="200" placeholder="Lugar de referencia (opcional)" /></label>
+              <label>Observaciones<textarea name="observations" [(ngModel)]="observations" rows="3" placeholder="Información adicional (opcional)"></textarea></label>
+            </div>
+            <div class="donation-form-footer"><span class="donation-help">Revisa los datos antes de registrar la donación.</span><button class="donation-primary" type="submit" [disabled]="donationForm.invalid || searching || resources.length === 0">Registrar donación</button></div>
+          </fieldset>
+        </form>
+        @if (created) {
+          <div class="donation-message donation-success"><p>Código de trazabilidad: <strong>{{ created.codigoTrazabilidad }}</strong></p><div class="donation-confirmation-actions"><a routerLink="/trazabilidad">Consultar trazabilidad</a>
+            <button type="button" (click)="newDonation()">Registrar otra donación</button></div></div>
+        }
+      </section>
+    }
+    @if (isCatalogPage && canManageCatalogs) {
+      <div class="donation-tabs" role="tablist" aria-label="Catálogos de donaciones">
+        @for (tab of tabs; track tab.id) {
+          <button type="button" role="tab" [id]="'tab-' + tab.id" aria-controls="catalog-panel" [attr.aria-selected]="activeTab === tab.id" [tabIndex]="activeTab === tab.id ? 0 : -1" [disabled]="saving" (click)="selectTab(tab.id)" (keydown)="onTabKey($event)">{{ tab.label }}</button>
+        }
+      </div>
+      <p class="donation-help donation-draft-notice">Los datos sin enviar se conservan al cambiar de pestaña mientras permanezcas en esta pantalla.</p>
+      <section id="catalog-panel" role="tabpanel" [attr.aria-labelledby]="'tab-' + activeTab" tabindex="0">
+        @if (activeTab !== 'unidades') {
+          <div class="donation-admin-grid">
+            <section class="panel donation-panel" aria-labelledby="catalog-list-title">
+              <div class="donation-section-heading"><h2 id="catalog-list-title">{{ activeTab === 'donantes' ? 'Donantes' : 'Centros de acopio' }}</h2><p>Busca por nombre y consulta los registros disponibles.</p></div>
+              <form class="donation-search-form" (ngSubmit)="search(catalogKind)">
+                <label>Buscar por nombre<input [name]="catalogKind" [(ngModel)]="searchText[catalogKind]" maxlength="150" placeholder="Escribe un nombre" /></label>
+                <div class="donation-search-actions"><button class="donation-primary" type="submit" [disabled]="saving">Buscar</button><button type="button" [disabled]="saving || catalogLoading[catalogKind] || catalogs[catalogKind].page + 1 >= catalogs[catalogKind].totalPages" (click)="search(catalogKind, true)">Cargar más</button></div>
+              </form>
+              @if (catalogLoading[catalogKind]) { <p class="donation-help" role="status">Cargando catálogo…</p> }
+              @else if (catalogErrors[catalogKind]) { <p class="alert" role="alert">{{ catalogErrors[catalogKind] }}</p> }
+              @else if (!catalogs[catalogKind].content.length) { <p class="donation-empty" role="status">No hay resultados para {{ catalogKind }}.</p> }
+              @else {
+                <ul class="donation-results">
+                  @for (item of catalogs[catalogKind].content; track item.id) { <li><div class="donation-result-title"><strong>{{ item.nombre }}</strong><span>ID {{ item.id }}</span></div>@if (item.ubicacion) { <p class="donation-help">{{ item.ubicacion }}</p> }</li> }
+                </ul>
+              }
+            </section>
+            <section class="panel donation-panel" aria-labelledby="create-catalog-title">
+              <div class="donation-section-heading"><h2 id="create-catalog-title">{{ activeTab === 'donantes' ? 'Añadir donante' : 'Añadir centro de acopio' }}</h2><p>Incorpora un nuevo registro para utilizarlo en las donaciones.</p></div>
+              <form #catalogForm="ngForm" (ngSubmit)="createCatalog()"><fieldset class="donation-fields" [disabled]="saving || searching">
+                <legend class="donation-sr-only">Nuevo registro de catálogo</legend>
+                <label>Nombre *<input name="catalogName" [(ngModel)]="catalogName" required maxlength="150" /></label>
+                @if (catalogKind === 'centros') {
+                  <label>Ubicación<input name="catalogLocation" [(ngModel)]="catalogLocation" maxlength="200" /></label>
+                  <label>Descripción<textarea name="catalogDescription" [(ngModel)]="catalogDescription" rows="3"></textarea></label>
+                }
+                <div class="donation-form-footer"><span class="donation-help">* Campo obligatorio</span><button class="donation-primary" type="submit" [disabled]="catalogForm.invalid">Añadir al catálogo</button></div>
+              </fieldset></form>
+            </section>
+          </div>
+        } @else {
+          <div class="donation-admin-grid">
+            <section class="panel donation-panel" aria-labelledby="unit-list-title">
+              <div class="donation-section-heading"><h2 id="unit-list-title">Unidades de medida</h2><p>Consulta las unidades disponibles para los recursos.</p></div>
+              <label>Buscar por nombre, código o símbolo<input name="unitSearch" [(ngModel)]="unitSearch" placeholder="Ej. Kilogramo o KG" /></label>
+              @if (unitsLoading) { <p role="status">Cargando unidades…</p> }
+              @else if (unitsError) { <p class="alert" role="alert">{{ unitsError }}</p><button type="button" (click)="reloadUnits()">Reintentar</button> }
+              @else if (!filteredUnits.length) { <p class="donation-empty" role="status">No hay unidades que coincidan con la búsqueda.</p> }
+              @else { <ul class="donation-results">@for (unit of filteredUnits; track unit.id) { <li><div class="donation-result-title"><strong>{{ unit.nombre }}</strong><span>ID {{ unit.id }}</span></div><p class="donation-help">{{ unit.codigo }}{{ unit.simbolo ? ' · ' + unit.simbolo : '' }}</p></li> }</ul> }
+            </section>
+            <section class="panel donation-panel" aria-labelledby="create-unit-title">
+              <div class="donation-section-heading"><h2 id="create-unit-title">Añadir unidad de medida</h2><p>Define cómo se expresan las cantidades de los recursos.</p></div>
+              <form #unitForm="ngForm" (ngSubmit)="createUnit()"><fieldset class="donation-fields" [disabled]="saving">
+                <legend class="donation-sr-only">Nueva unidad de medida</legend>
+                <div class="donation-form-grid">
+                  <label>Código *<input name="unitCode" [(ngModel)]="unitCode" maxlength="30" pattern="[A-Za-z0-9_-]+" required placeholder="Ej. KG" /><span class="donation-help">Letras, números, guion o guion bajo.</span></label>
+                  <label>Símbolo<input name="unitSymbol" [(ngModel)]="unitSymbol" maxlength="20" placeholder="Ej. kg" /></label>
+                </div>
+                <label>Nombre *<input name="unitName" [(ngModel)]="unitName" maxlength="80" required placeholder="Ej. Kilogramo" /></label>
+                <div class="donation-form-footer"><span class="donation-help">* Campos obligatorios</span><button class="donation-primary" type="submit" [disabled]="unitForm.invalid">Añadir unidad</button></div>
+              </fieldset></form>
+              <a class="donation-resource-link" routerLink="/recursos">Administrar recursos con las unidades registradas <span aria-hidden="true">→</span></a>
+            </section>
+          </div>
+        }
+      </section>
+    }
+  }
+</app-shell>

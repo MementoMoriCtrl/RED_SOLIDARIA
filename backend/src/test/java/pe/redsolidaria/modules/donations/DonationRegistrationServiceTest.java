@@ -70,6 +70,7 @@ class DonationRegistrationServiceTest {
         when(resources.findAllById(List.of(7L))).thenReturn(List.of(resource));
         when(resource.getId()).thenReturn(7L);
         when(resource.getNombre()).thenReturn("Agua");
+        when(resource.getEstado()).thenReturn("ACTIVO");
         when(donor.getId()).thenReturn(11L);
         when(donor.getNombre()).thenReturn("Donante de prueba");
         when(center.getId()).thenReturn(3L);

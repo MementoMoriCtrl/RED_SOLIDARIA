@@ -46,10 +46,17 @@ class DonationReceiptAuthorizationWebTest {
     @Test void requiresAdministratorPermission() throws Exception {
         mvc.perform(post("/api/donaciones/administracion/15/recepciones").with(user("admin").authorities(
                         new SimpleGrantedAuthority("ACCESO_ADMINISTRAR")))
-                .contentType("application/json").content("{\"detalles\":[{\"recursoId\":3,\"cantidad\":1}] }"))
+                .contentType("application/json").content("{\"operacionId\":\"f9eec73a-d766-4683-9094-e7cb6253aa30\",\"detalles\":[{\"recursoId\":3,\"cantidad\":1}] }"))
                 .andExpect(status().isOk());
         verify(service).register(org.mockito.ArgumentMatchers.eq(15L), org.mockito.ArgumentMatchers.eq("admin"),
                 org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test void rejectsReceiptWithoutDurableOperationIdentity() throws Exception {
+        mvc.perform(post("/api/donaciones/administracion/15/recepciones").with(user("admin").authorities(
+                        new SimpleGrantedAuthority("ACCESO_ADMINISTRAR")))
+                .contentType("application/json").content("{\"detalles\":[{\"recursoId\":3,\"cantidad\":1}]}"))
+                .andExpect(status().isBadRequest());
     }
 
     @TestConfiguration static class Dependencies {

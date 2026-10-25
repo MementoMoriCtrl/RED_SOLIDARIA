@@ -40,7 +40,9 @@ class DonationReceiptServiceTest {
     DonationMovementRepository movements = mock(DonationMovementRepository.class);
     AuditRecordRepository audits = mock(AuditRecordRepository.class);
     EntityManager entityManager = mock(EntityManager.class);
-    DonationReceiptService service = new DonationReceiptService(donations, users, movements, audits, entityManager);
+    pe.redsolidaria.modules.donations.persistence.ReceiptOperationRepository operations = mock(pe.redsolidaria.modules.donations.persistence.ReceiptOperationRepository.class);
+    DonationReceiptService service = new DonationReceiptService(donations, users, movements, audits, entityManager,
+            operations, tools.jackson.databind.json.JsonMapper.builder().build());
     Donation donation = mock(Donation.class);
     DonationLine line = mock(DonationLine.class);
     Resource resource = mock(Resource.class);
@@ -101,5 +103,35 @@ class DonationReceiptServiceTest {
                 new ReceiptLineRequest(8L, BigDecimal.ONE)), null, null);
         assertThrows(ResponseStatusException.class, () -> service.register(22L, "admin@example.test", request));
         verify(movements, never()).saveAndFlush(any());
+    }
+
+    @Test void replaysTheStoredResponseEvenAfterReceiptCompletedAndServiceWasRecreated() {
+        var stored = new java.util.HashMap<String, pe.redsolidaria.modules.donations.domain.ReceiptOperation>();
+        when(operations.findByDonacion_IdAndOperacionId(any(), any())).thenAnswer(call -> Optional.ofNullable(stored.get(call.getArgument(1))));
+        when(operations.saveAndFlush(any())).thenAnswer(call -> {
+            pe.redsolidaria.modules.donations.domain.ReceiptOperation operation = call.getArgument(0);
+            stored.put(operation.getOperacionId(), operation); return operation;
+        });
+        var request = new RegisterReceiptRequest(List.of(new ReceiptLineRequest(8L, new BigDecimal("3.000"))), null, null);
+        var response = service.register(22L, "admin@example.test", request);
+        when(donation.getEstado()).thenReturn("RECIBIDA");
+        var restarted = new DonationReceiptService(donations, users, movements, audits, entityManager, operations,
+                tools.jackson.databind.json.JsonMapper.builder().build());
+        assertEquals(response, restarted.register(22L, "admin@example.test", request));
+        verify(line, org.mockito.Mockito.times(1)).recibir(any());
+        verify(audits, org.mockito.Mockito.times(1)).saveAndFlush(any());
+        var altered = new RegisterReceiptRequest(List.of(new ReceiptLineRequest(8L, BigDecimal.ONE)), null, null, request.operacionId());
+        assertEquals(409, assertThrows(ResponseStatusException.class,
+                () -> restarted.register(22L, "admin@example.test", altered)).getStatusCode().value());
+    }
+
+    @Test void distinctOperationKeysAllowLegitimateLaterPartialReceipts() {
+        var first = new RegisterReceiptRequest(List.of(new ReceiptLineRequest(8L, BigDecimal.ONE)), null, null);
+        var second = new RegisterReceiptRequest(List.of(new ReceiptLineRequest(8L, BigDecimal.ONE)), null, null);
+        org.junit.jupiter.api.Assertions.assertNotEquals(first.operacionId(), second.operacionId());
+        service.register(22L, "admin@example.test", first);
+        service.register(22L, "admin@example.test", second);
+        assertEquals(new BigDecimal("4.000"), accumulated.get());
+        verify(operations, org.mockito.Mockito.times(2)).saveAndFlush(any());
     }
 }

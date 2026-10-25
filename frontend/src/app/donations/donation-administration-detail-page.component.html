@@ -41,24 +41,25 @@
       @if (item.observaciones) { <p class="admin-observations"><strong>Observaciones:</strong> {{ item.observaciones }}</p> }
     </section>
 
+    @if (receiptSuccess) { <div class="success-alert" role="status">{{ receiptSuccess }}</div> }
     @if (canReceive) {
       <section class="panel admin-detail-section receipt-form" aria-labelledby="receipt-heading">
         <div class="section-heading"><div><p class="eyebrow">RECEPCIÓN</p><h2 id="receipt-heading">Registrar recepción parcial</h2></div></div>
         <p class="muted-copy">Indica las cantidades recibidas en esta operación. Puedes registrar varias recepciones hasta completar cada recurso.</p>
+        @if (pendingReceipt) { <p role="status">Hay una recepción pendiente de confirmación. El reintento enviará exactamente los mismos datos e identificador.</p> }
         @if (receiptError) { <div class="alert" role="alert">{{ receiptError }}</div> }
-        @if (receiptSuccess) { <div class="success-alert" role="status">{{ receiptSuccess }}</div> }
         <div class="receipt-lines">
           @for (line of item.detalles; track line.recursoId) {
             @if (line.cantidadDonada > line.cantidadRecibidaAcopio) {
               <label>{{ line.recursoNombre }} · pendiente {{ line.cantidadDonada - line.cantidadRecibidaAcopio | number:'1.0-3' }} {{ line.unidadSimbolo || line.unidadCodigo }}
-                <input type="number" min="0.001" step="0.001" [max]="line.cantidadDonada - line.cantidadRecibidaAcopio" (input)="setReceiptAmount(line.recursoId, $any($event.target).value)" [attr.aria-label]="'Cantidad recibida de ' + line.recursoNombre">
+                <input type="number" min="0.001" step="0.001" [disabled]="savingReceipt || !!pendingReceipt" [value]="receiptAmounts[line.recursoId] || ''" [max]="line.cantidadDonada - line.cantidadRecibidaAcopio" (input)="setReceiptAmount(line.recursoId, $any($event.target).value)" [attr.aria-label]="'Cantidad recibida de ' + line.recursoNombre">
               </label>
             }
           }
         </div>
         <div class="receipt-meta">
-          <label>Ubicación<input type="text" maxlength="200" [value]="receiptLocation" (input)="receiptLocation = $any($event.target).value"></label>
-          <label>Observaciones<textarea rows="3" [value]="receiptObservations" (input)="receiptObservations = $any($event.target).value"></textarea></label>
+          <label>Ubicación<input type="text" maxlength="200" [disabled]="savingReceipt || !!pendingReceipt" [value]="receiptLocation" (input)="receiptLocation = $any($event.target).value"></label>
+          <label>Observaciones<textarea rows="3" [disabled]="savingReceipt || !!pendingReceipt" [value]="receiptObservations" (input)="receiptObservations = $any($event.target).value"></textarea></label>
         </div>
         <button class="primary-button" type="button" [disabled]="savingReceipt" (click)="submitReceipt()">{{ savingReceipt ? 'Guardando recepción…' : 'Registrar recepción' }}</button>
       </section>

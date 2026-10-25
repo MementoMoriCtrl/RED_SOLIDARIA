@@ -1,0 +1,64 @@
+<app-shell breadcrumb="Administración / Auditoría" footerText="Registro de auditoría">
+  <section class="intro" aria-labelledby="page-title">
+    <p class="eyebrow">ADMINISTRACIÓN</p>
+    <h1 id="page-title">Registro de auditoría</h1>
+    <p class="intro-copy">Consulta los eventos registrados por las operaciones del sistema.</p>
+  </section>
+
+  <form class="panel audit-filters" (ngSubmit)="load(0)">
+    <label>Acción
+      <input name="action" [(ngModel)]="action" maxlength="50" placeholder="Ej.: RECEPCION_DONACION" autocomplete="off" />
+    </label>
+    <label>Entidad
+      <input name="entity" [(ngModel)]="entity" maxlength="100" placeholder="Ej.: DONACION" autocomplete="off" />
+    </label>
+    <label>ID del registro
+      <input name="recordId" [(ngModel)]="recordId" maxlength="100" autocomplete="off" />
+    </label>
+    <label>Responsable
+      <input name="user" [(ngModel)]="user" maxlength="150" placeholder="Nombre o correo" autocomplete="off" />
+    </label>
+    <label>Desde
+      <input name="fromDate" type="date" [(ngModel)]="fromDate" />
+    </label>
+    <label>Hasta
+      <input name="toDate" type="date" [(ngModel)]="toDate" />
+    </label>
+    <button class="primary-button" type="submit" [disabled]="loading">{{ loading ? 'Buscando…' : 'Buscar' }}</button>
+  </form>
+
+  @if (error) { <div class="alert" role="alert">{{ error }}</div> }
+  @if (loading) {
+    <section class="panel audit-state" role="status"><span class="spinner" aria-hidden="true"></span>Cargando eventos de auditoría…</section>
+  } @else if (!error && events.length === 0) {
+    <section class="panel audit-state empty" role="status">
+      <h2>No hay eventos que coincidan</h2>
+      <p>Prueba con otros filtros o un rango de fechas distinto.</p>
+    </section>
+  } @else if (!error) {
+    <section class="panel audit-table-wrap" aria-label="Eventos de auditoría">
+      <table class="audit-table">
+        <thead><tr><th>Fecha y hora</th><th>Acción</th><th>Entidad</th><th>ID del registro</th><th>Responsable</th></tr></thead>
+        <tbody>
+          @for (event of events; track event.id) {
+            <tr>
+              <td>{{ event.fechaHora | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+              <td><span class="audit-action">{{ event.accion }}</span></td>
+              <td>{{ event.entidad }}</td>
+              <td>{{ event.idRegistro }}</td>
+              <td>{{ event.responsableNombre || 'No disponible' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+    <nav class="audit-pagination" aria-label="Paginación de auditoría">
+      <span>Mostrando {{ firstResult }}–{{ lastResult }} de {{ totalElements }}</span>
+      <div>
+        <button class="secondary-button" type="button" [disabled]="page === 0 || loading" (click)="load(page - 1)">Anterior</button>
+        <span>Página {{ page + 1 }} de {{ totalPages || 1 }}</span>
+        <button class="secondary-button" type="button" [disabled]="last || loading" (click)="load(page + 1)">Siguiente</button>
+      </div>
+    </nav>
+  }
+</app-shell>

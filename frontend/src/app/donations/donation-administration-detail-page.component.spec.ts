@@ -12,6 +12,7 @@ describe('DonationAdministrationDetailPageComponent', () => {
   let http: HttpTestingController;
 
   beforeEach(async () => {
+    sessionStorage.clear();
     await TestBed.configureTestingModule({
       imports: [DonationAdministrationDetailPageComponent],
       providers: [
@@ -80,11 +81,37 @@ describe('DonationAdministrationDetailPageComponent', () => {
     await fixture.whenStable();
     fixture.componentInstance.setReceiptAmount(9, '12');
     fixture.componentInstance.submitReceipt();
-    http.expectOne('/api/donaciones/administracion/42/recepciones').flush(
-      { detail: 'La cantidad supera lo pendiente' }, { status: 400, statusText: 'Bad Request' });
+    http.expectNone('/api/donaciones/administracion/42/recepciones');
     await fixture.whenStable();
     expect(fixture.componentInstance.savingReceipt).toBe(false);
     expect(fixture.componentInstance.receiptError).toContain('cantidad supera');
+  });
+
+  it('retries an unconfirmed receipt with the same durable identity after recreating the page', async () => {
+    http.expectOne('/api/donaciones/administracion/42').flush(donationResponse(0));
+    fixture.componentInstance.setReceiptAmount(9, '2.5');
+    fixture.componentInstance.submitReceipt();
+    const first = http.expectOne('/api/donaciones/administracion/42/recepciones');
+    const payload = first.request.body;
+    expect(payload.operacionId).toMatch(/^[0-9a-f-]{36}$/);
+    first.flush({}, { status: 500, statusText: 'Server Error' });
+    fixture.destroy();
+    fixture = TestBed.createComponent(DonationAdministrationDetailPageComponent);
+    fixture.autoDetectChanges();
+    http.expectOne('/api/donaciones/administracion/42').flush(donationResponse(2.5));
+    fixture.componentInstance.submitReceipt();
+    const retry = http.expectOne('/api/donaciones/administracion/42/recepciones');
+    expect(retry.request.body).toEqual(payload);
+    retry.flush({ donacionId: 42, estado: 'REGISTRADA' });
+    http.expectOne('/api/donaciones/administracion/42').flush(donationResponse(2.5));
+    expect(fixture.componentInstance.pendingReceipt).toBeNull();
+    fixture.componentInstance.setReceiptAmount(9, '1');
+    fixture.componentInstance.submitReceipt();
+    const later = http.expectOne('/api/donaciones/administracion/42/recepciones');
+    expect(later.request.body.operacionId).not.toBe(payload.operacionId);
+    later.flush({ donacionId: 42, estado: 'REGISTRADA' });
+    http.expectOne('/api/donaciones/administracion/42').flush(donationResponse(3.5));
+    await fixture.whenStable();
   });
 
   function donationResponse(received: number) {

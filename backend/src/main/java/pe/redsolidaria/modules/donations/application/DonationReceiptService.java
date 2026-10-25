@@ -34,22 +34,34 @@ public class DonationReceiptService {
     private final DonationMovementRepository movements;
     private final AuditRecordRepository audit;
     private final EntityManager entityManager;
+    private final pe.redsolidaria.modules.donations.persistence.ReceiptOperationRepository operations;
+    private final tools.jackson.databind.json.JsonMapper json;
 
     public DonationReceiptService(DonationRepository donations, UserRepository users,
-            DonationMovementRepository movements, AuditRecordRepository audit, EntityManager entityManager) {
+            DonationMovementRepository movements, AuditRecordRepository audit, EntityManager entityManager,
+            pe.redsolidaria.modules.donations.persistence.ReceiptOperationRepository operations,
+            tools.jackson.databind.json.JsonMapper json) {
         this.donations = donations;
         this.users = users;
         this.movements = movements;
         this.audit = audit;
         this.entityManager = entityManager;
+        this.operations = operations; this.json = json;
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public RegisterReceiptResponse register(Long donationId, String email, RegisterReceiptRequest request) {
         validateRequest(request);
         // Acquire the parent row lock before any read of the received quantities.
         Donation donation = donations.findByIdForUpdate(donationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Donación no encontrada"));
+        String fingerprint = fingerprint(email, request);
+        var previous = operations.findByDonacion_IdAndOperacionId(donationId, request.operacionId().toString());
+        if (previous.isPresent()) {
+            if (!previous.get().getHuella().equals(fingerprint)) throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La operación ya existe con otro contenido o responsable");
+            return json.readValue(previous.get().getRespuesta(), RegisterReceiptResponse.class);
+        }
         if (!"REGISTRADA".equals(donation.getEstado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "La donación ya fue recibida completamente o su estado no admite más recepciones");
@@ -100,6 +112,7 @@ public class DonationReceiptService {
             responseLines.add(new ReceiptLineResult(line.getRecurso().getId(), line.getRecurso().getNombre(), quantity, accumulated, pending));
         }
         boolean complete = lines.stream().allMatch(line -> line.getCantidadRecibidaAcopio().compareTo(line.getCantidadDonada()) >= 0);
+        donation.registrarIngresoSiFalta();
         String oldState = donation.getEstado();
         if (complete) donation.marcarRecibida();
         String newState = donation.getEstado();
@@ -115,7 +128,24 @@ public class DonationReceiptService {
         AuditRecord saved = audit.saveAndFlush(new AuditRecord(responsible, "DONACION",
                 String.valueOf(donation.getId()), AUDIT_ACTION, serialize(oldData), serialize(newData)));
         entityManager.refresh(saved);
-        return new RegisterReceiptResponse(donation.getId(), newState, saved.getFechaHora(), location, observations, responseLines);
+        var response = new RegisterReceiptResponse(donation.getId(), newState, saved.getFechaHora(), location, observations, responseLines);
+        operations.saveAndFlush(new pe.redsolidaria.modules.donations.domain.ReceiptOperation(donation,
+                request.operacionId().toString(), fingerprint, json.writeValueAsString(response)));
+        return response;
+    }
+
+    private String fingerprint(String email, RegisterReceiptRequest request) {
+        var canonical = new LinkedHashMap<String, Object>();
+        canonical.put("responsable", email.trim().toLowerCase(java.util.Locale.ROOT));
+        canonical.put("ubicacion", clean(request.ubicacion()));
+        canonical.put("observaciones", clean(request.observaciones()));
+        canonical.put("detalles", request.detalles().stream()
+                .sorted(java.util.Comparator.comparing(ReceiptLineRequest::recursoId))
+                .map(line -> List.of(line.recursoId().toString(), line.cantidad().stripTrailingZeros().toPlainString())).toList());
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(json.writeValueAsString(canonical).getBytes(StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
 
     private String serialize(Object value) {
@@ -155,6 +185,12 @@ public class DonationReceiptService {
     }
     private static void validateRequest(RegisterReceiptRequest request) {
         if (request == null || request.detalles() == null || request.detalles().isEmpty()) throw badRequest("Indique al menos un recurso recibido");
+        if (request.operacionId() == null) throw badRequest("Indique el UUID de la operación para permitir reintentos seguros");
+        Set<Long> ids = new HashSet<>();
+        for (var line : request.detalles()) {
+            if (line == null || line.recursoId() == null || line.recursoId() <= 0 || line.cantidad() == null
+                    || invalidQuantity(line.cantidad()) || !ids.add(line.recursoId())) throw badRequest("Revisa recursos y cantidades");
+        }
     }
     private static String clean(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private static ResponseStatusException badRequest(String message) { return new ResponseStatusException(HttpStatus.BAD_REQUEST, message); }

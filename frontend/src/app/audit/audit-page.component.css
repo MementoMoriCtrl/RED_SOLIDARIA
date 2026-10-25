@@ -1,0 +1,23 @@
+:host { display: block; min-height: 100vh; }
+.audit-filters { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); align-items: end; gap: .85rem; }
+.audit-filters label { display: grid; gap: .45rem; color: #475569; font-size: .76rem; font-weight: 700; }
+.audit-filters input { width: 100%; min-height: 43px; padding: .65rem .75rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: .86rem; }
+.primary-button, .secondary-button { min-height: 40px; padding: .55rem .8rem; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; cursor: pointer; font: inherit; font-size: .8rem; font-weight: 700; }
+.primary-button:disabled, .secondary-button:disabled { cursor: not-allowed; opacity: .55; }
+.audit-state { display: flex; align-items: center; gap: .7rem; margin-top: 1rem; color: var(--muted); font-size: .86rem; }
+.audit-state .spinner { width: 20px; height: 20px; flex: 0 0 auto; border: 2px solid #bfdbfe; border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; }
+.audit-state.empty { display: block; }
+.audit-state h2 { margin: 0 0 .4rem; color: var(--navy); }
+.audit-state p { margin: 0; }
+.audit-table-wrap { margin-top: 1rem; overflow-x: auto; padding: 0; }
+.audit-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .82rem; }
+.audit-table th, .audit-table td { padding: .9rem 1rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.audit-table th { color: #64748b; font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
+.audit-table tbody tr:last-child td { border-bottom: 0; }
+.audit-action { color: var(--navy); font-weight: 750; }
+.audit-pagination { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: .85rem; color: var(--muted); font-size: .8rem; }
+.audit-pagination div { display: flex; align-items: center; gap: .7rem; }
+.secondary-button { background: #fff; color: var(--blue-hover); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 800px) { .audit-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .audit-filters { grid-template-columns: 1fr; } .audit-pagination { align-items: flex-start; flex-direction: column; } .audit-pagination div { flex-wrap: wrap; } }

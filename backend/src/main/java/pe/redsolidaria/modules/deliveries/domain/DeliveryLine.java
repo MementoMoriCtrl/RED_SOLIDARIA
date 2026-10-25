@@ -14,4 +14,11 @@ public class DeliveryLine {
     @Column(name = "cantidad_asignada", nullable = false, precision = 14, scale = 3) private BigDecimal cantidadAsignada;
     @Column(name = "cantidad_entregada", nullable = false, precision = 14, scale = 3) private BigDecimal cantidadEntregada;
     protected DeliveryLine() {}
+    public DeliveryLine(Delivery entrega, DonationLine donacion, Need necesidad,
+            BigDecimal asignada, BigDecimal entregada) {
+        this.entrega = entrega; this.detalleDonacion = donacion; this.necesidad = necesidad;
+        this.cantidadAsignada = asignada; this.cantidadEntregada = entregada;
+    }
+    public BigDecimal getCantidadAsignada() { return cantidadAsignada; }
+    public BigDecimal getCantidadEntregada() { return cantidadEntregada; }
 }

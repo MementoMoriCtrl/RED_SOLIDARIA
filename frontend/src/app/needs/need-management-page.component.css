@@ -1,0 +1,12 @@
+:host { display: block; min-height: 100vh; }
+.panel { margin-top: 1rem; }
+form { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+label { display: grid; gap: .4rem; flex: 1 1 180px; }
+input, select, textarea { padding: .6rem; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%; font: inherit; }
+button { padding: .65rem; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font: inherit; }
+.primary-button { background: var(--blue); color: white; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.table-wrap { overflow-x: auto; margin-top: 1rem; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td { padding: .7rem; border-bottom: 1px solid #cbd5e1; }
+nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1rem; }

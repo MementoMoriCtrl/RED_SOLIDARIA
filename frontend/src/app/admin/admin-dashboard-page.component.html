@@ -1,5 +1,4 @@
 ﻿<app-shell breadcrumb="Administración / Panel" footerText="Administración">
-  <button shell-actions type="button" class="secondary-button" (click)="cerrarSesion()">Cerrar sesión</button>
   <section class="intro" aria-labelledby="page-title">
       <p class="eyebrow">PANEL ADMINISTRATIVO</p>
       <h1 id="page-title">Bienvenido{{ profile()?.nombre ? ', ' + profile()!.nombre : '' }}</h1>
@@ -32,6 +31,20 @@
           <h2>Gestión de donaciones</h2>
           <p>Consulta donaciones registradas, sus detalles y su historial de movimientos.</p>
           <span class="admin-card-link">Abrir donaciones <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="panel admin-card" routerLink="/admin/auditoria">
+          <span class="admin-card-icon" aria-hidden="true">A</span>
+          <span class="eyebrow">CONTROL</span>
+          <h2>Registro de auditoría</h2>
+          <p>Consulta eventos administrativos registrados por el sistema.</p>
+          <span class="admin-card-link">Abrir auditoría <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="panel admin-card" routerLink="/admin/emergencias">
+          <span class="admin-card-icon" aria-hidden="true">E</span>
+          <span class="eyebrow">OPERACIÓN</span>
+          <h2>Gestión de emergencias</h2>
+          <p>Administra emergencias y sus zonas afectadas.</p>
+          <span class="admin-card-link">Abrir emergencias <span aria-hidden="true">→</span></span>
         </a>
       </section>
 

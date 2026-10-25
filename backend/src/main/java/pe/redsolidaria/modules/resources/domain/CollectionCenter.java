@@ -14,6 +14,9 @@ public class CollectionCenter {
     @Column(name = "creado_en", insertable = false, updatable = false) private LocalDateTime creadoEn;
     @OneToMany(mappedBy = "centroAcopio") private List<pe.redsolidaria.modules.donations.domain.Donation> donaciones = new ArrayList<>();
     protected CollectionCenter() {}
+    public CollectionCenter(String nombre, String ubicacion, String descripcion) {
+        this.nombre = nombre; this.ubicacion = ubicacion; this.descripcion = descripcion;
+    }
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
     public String getUbicacion() { return ubicacion; }

@@ -1,1 +1,14 @@
 :host { display: block; min-height: 100vh; }
+.sidebar { overflow-y: auto; }
+.page-header { flex-wrap: wrap; padding-block: .75rem; }
+.breadcrumb { min-width: 0; overflow-wrap: anywhere; }
+.header-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .75rem; margin-left: auto; }
+.session-button { min-height: 42px; padding: .6rem .85rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: var(--navy); cursor: pointer; font: inherit; font-size: .82rem; font-weight: 700; }
+.session-button:hover { background: #f8fafc; border-color: #94a3b8; }
+.sidebar-session-button { width: 100%; margin-bottom: .9rem; border-color: rgb(255 255 255 / 30%); background: rgb(255 255 255 / 9%); color: #fff; }
+.sidebar-session-button:hover { background: rgb(255 255 255 / 18%); border-color: #fff; }
+@media (max-width: 680px) {
+  .sidebar-footer { display: block; grid-column: 1 / -1; margin-top: .5rem; }
+  .sidebar-session-button { width: auto; }
+  .header-actions { gap: .5rem; }
+}

@@ -6,12 +6,22 @@
     </a>
     <p class="sidebar-label">MÓDULOS</p>
     <nav class="side-nav" aria-label="Módulos disponibles">
+      @if (showDonationRegistrationLink) { <a class="nav-item" routerLink="/donaciones/registro" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">D</span><span>Registrar donación</span></a> }
+      @if (showAdminLink) { <a class="nav-item" routerLink="/admin/catalogos-donaciones" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">C</span><span>Catálogos de donaciones</span></a> }
       @if (showAdminLink) {
         <a class="nav-item" routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
           <span class="nav-icon" aria-hidden="true">A</span><span>Panel administrativo</span>
         </a>
         <a class="nav-item" routerLink="/admin/donaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page">
           <span class="nav-icon" aria-hidden="true">D</span><span>Gestión de donaciones</span>
+        </a>
+        <a class="nav-item" routerLink="/admin/auditoria" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
+          <span class="nav-icon" aria-hidden="true">A</span><span>Registro de auditoría</span>
+        </a>
+      }
+      @if (showAdminLink) {
+        <a class="nav-item" routerLink="/admin/emergencias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
+          <span class="nav-icon" aria-hidden="true">E</span><span>Gestión de emergencias</span>
         </a>
       }
       @if (showResourceLink) {
@@ -23,13 +33,23 @@
         <span class="nav-icon" aria-hidden="true">T</span><span>Trazabilidad pública</span>
       </a>
     </nav>
-    <div class="sidebar-footer">{{ footerText }}<br />Red Solidaria</div>
+    <div class="sidebar-footer">
+      @if (isAuthenticated) {
+        <button type="button" class="session-button sidebar-session-button" (click)="cerrarSesion()">Cerrar sesión</button>
+      }
+      <div>{{ footerText }}<br />Red Solidaria</div>
+    </div>
   </aside>
 
   <div class="page-shell">
     <header class="page-header">
       <span class="breadcrumb">{{ breadcrumb }}</span>
-      <ng-content select="[shell-actions]" />
+      <div class="header-actions">
+        <ng-content select="[shell-actions]" />
+        @if (isAuthenticated) {
+          <button type="button" class="session-button header-session-button" (click)="cerrarSesion()">Cerrar sesión</button>
+        }
+      </div>
     </header>
     <ng-content />
   </div>

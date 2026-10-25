@@ -14,4 +14,6 @@ public class Delivery {
     @Column(columnDefinition = "TEXT") private String observaciones;
     @OneToMany(mappedBy = "entrega") private List<DeliveryLine> detalles = new ArrayList<>();
     protected Delivery() {}
+    public Delivery(UserAccount responsable) { this.responsable = responsable; }
+    public Long getId() { return id; }
 }

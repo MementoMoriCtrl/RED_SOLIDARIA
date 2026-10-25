@@ -21,6 +21,30 @@ public class Emergency {
     @OneToMany(mappedBy = "emergencia") private List<AffectedZone> zonas = new ArrayList<>();
     @OneToMany(mappedBy = "emergencia") private List<Donation> donaciones = new ArrayList<>();
     protected Emergency() {}
+    public Emergency(String nombre, String tipo, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, String estado) {
+        this.nombre = nombre;
+        this.tipo = tipo;
+        this.descripcion = descripcion;
+        this.fechaInicio = fechaInicio;
+        this.fechaFin = fechaFin;
+        this.estado = estado;
+    }
+    public void actualizar(String nombre, String tipo, String descripcion, LocalDate fechaInicio, LocalDate fechaFin) {
+        this.nombre = nombre;
+        this.tipo = tipo;
+        this.descripcion = descripcion;
+        this.fechaInicio = fechaInicio;
+        this.fechaFin = fechaFin;
+    }
+    public void cambiarEstado(String estado) { this.estado = estado; }
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
+    public String getTipo() { return tipo; }
+    public String getDescripcion() { return descripcion; }
+    public LocalDate getFechaInicio() { return fechaInicio; }
+    public LocalDate getFechaFin() { return fechaFin; }
+    public String getEstado() { return estado; }
+    public LocalDateTime getCreadoEn() { return creadoEn; }
+    public LocalDateTime getActualizadoEn() { return actualizadoEn; }
+    public List<AffectedZone> getZonas() { return zonas; }
 }

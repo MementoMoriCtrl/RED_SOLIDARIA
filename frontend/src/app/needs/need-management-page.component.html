@@ -1,0 +1,65 @@
+<app-shell breadcrumb="Administración / Necesidades y entregas" footerText="Necesidades y entregas">
+  <section class="intro"><p class="eyebrow">OPERACIÓN</p><h1>Necesidades y entregas</h1>
+    <p>{{ title }}</p><a routerLink="/admin/emergencias">Volver a emergencias</a></section>
+  @if (error) { <div class="alert" role="alert">{{ error }}</div> }
+  @if (success) { <p role="status">{{ success }}</p> }
+  @if (loading) { <p role="status">Cargando necesidades…</p> }
+  @else {
+    <section class="panel"><h2>Registrar necesidad de la zona</h2>
+      @if (resources.length === 0) { <p>No hay recursos activos disponibles para registrar necesidades.</p> }
+      <form #needForm="ngForm" (ngSubmit)="create()">
+        <label>Recurso<select name="resourceId" [(ngModel)]="resourceId" required>
+          <option [ngValue]="null">Selecciona un recurso</option>
+          @for (resource of resources; track resource.id) { <option [ngValue]="resource.id">{{ resource.nombre }} ({{ resource.unidadMedida.codigo }})</option> }
+        </select></label>
+        <label>Cantidad requerida<input name="quantity" type="number" [(ngModel)]="quantity" min="0.001" max="99999999999.999" step="0.001" required /></label>
+        <label>Prioridad<input name="priority" [(ngModel)]="priority" maxlength="30" required /></label>
+        <label>Observaciones<textarea name="observations" [(ngModel)]="observations" rows="2"></textarea></label>
+        <button class="primary-button" type="submit" [disabled]="saving || loadingSources || needForm.invalid || resources.length === 0">Registrar necesidad</button>
+      </form>
+    </section>
+    <section class="panel"><h2>Balance de necesidades</h2>
+      <p>Pendiente de entregar = requerida − entregada a la población. Una recepción en acopio no es una entrega.</p>
+      <button type="button" [disabled]="saving || loadingSources" (click)="load(needs.page)">Recargar saldos</button>
+      @if (needs.content.length === 0 && !error) { <p role="status">Todavía no hay necesidades registradas en esta zona.</p> }
+      @if (needs.content.length > 0) {
+        <div class="table-wrap"><table><thead><tr><th>Recurso / unidad</th><th>Prioridad</th><th>Requerida</th><th>Asignada</th><th>Entregada</th><th>Sin asignar</th><th>Pendiente de entregar</th><th></th></tr></thead>
+          <tbody>@for (need of needs.content; track need.id) {
+            <tr><td>{{ need.recursoNombre }} / {{ need.unidad }}</td><td>{{ need.prioridad }}</td>
+              <td>{{ need.requerida | number:'1.0-3' }}</td><td>{{ need.asignada | number:'1.0-3' }}</td><td>{{ need.entregada | number:'1.0-3' }}</td>
+              <td>{{ need.pendienteAsignar | number:'1.0-3' }}</td><td>{{ need.pendienteEntregar | number:'1.0-3' }}</td>
+              <td><button type="button" [disabled]="saving || loadingSources" (click)="select(need)">Asignar / entregar</button></td></tr>
+          }</tbody></table></div>
+      }
+      <nav aria-label="Paginación de necesidades"><button type="button" [disabled]="needs.page === 0 || saving || loadingSources" (click)="load(needs.page - 1)">Anterior</button>
+        <span>{{ needs.totalElements }} necesidades · Página {{ needs.page + 1 }} de {{ needs.totalPages || 1 }}</span>
+        <button type="button" [disabled]="needs.page + 1 >= needs.totalPages || saving || loadingSources" (click)="load(needs.page + 1)">Siguiente</button></nav>
+    </section>
+  }
+  @if (loadingSources) { <p role="status">Cargando donaciones compatibles…</p> }
+  @if (selected && !loading && !loadingSources) {
+    <section class="panel"><h2>Donaciones para {{ selected.recursoNombre }} ({{ selected.unidad }})</h2>
+      <p>Solo donaciones de la misma emergencia y recurso. Disponible = recibido en acopio − asignado a todas las necesidades.
+        Este saldo es compartido; no se suma otra vez por cada necesidad. Estados en tránsito, devuelta, incidencia o entregada no admiten nuevas operaciones.</p>
+      @if (sources.content.length === 0 && !error) { <p role="status">No hay donaciones con recepción o asignación registrada para este recurso y emergencia.</p> }
+      <div class="table-wrap"><table><thead><tr><th>Donación / estado</th><th>Recibido en acopio</th><th>Asignado total de donación</th><th>Disponible</th><th>Asignado a esta necesidad</th><th>Entregado a esta necesidad</th><th></th></tr></thead>
+        <tbody>@for (item of sources.content; track item.detalleDonacionId) {
+          <tr><td>{{ item.codigoTrazabilidad }} / {{ item.estado }}</td><td>{{ item.recibidaAcopio | number:'1.0-3' }}</td>
+            <td>{{ item.asignadaDonacion | number:'1.0-3' }}</td><td>{{ item.disponible | number:'1.0-3' }}</td>
+            <td>{{ item.asignadaNecesidad | number:'1.0-3' }}</td><td>{{ item.entregadaNecesidad | number:'1.0-3' }}</td>
+            <td><button type="button" [disabled]="saving || !item.habilitada" (click)="selectSource(item)">Seleccionar</button></td></tr>
+        }</tbody></table></div>
+      <nav aria-label="Paginación de donaciones"><button type="button" [disabled]="sources.page === 0 || saving" (click)="select(selected, sources.page - 1)">Anterior</button>
+        <span>Página {{ sources.page + 1 }} de {{ sources.totalPages || 1 }}</span>
+        <button type="button" [disabled]="sources.page + 1 >= sources.totalPages || saving" (click)="select(selected, sources.page + 1)">Siguiente</button></nav>
+      @if (source) {
+        <h3>{{ source.codigoTrazabilidad }}</h3><p>Ingresa los totales acumulados de esta donación para esta necesidad. Para confirmar una entrega posterior, conserva el total asignado y aumenta únicamente el entregado. Reenviar los mismos totales no duplica la operación.</p>
+        <form #deliveryForm="ngForm" (ngSubmit)="saveDelivery()">
+          <label>Total asignado<input name="assigned" type="number" [(ngModel)]="assigned" [min]="source.asignadaNecesidad" max="99999999999.999" step="0.001" required /></label>
+          <label>Total entregado a población<input name="delivered" type="number" [(ngModel)]="delivered" [min]="source.entregadaNecesidad" [max]="assigned ?? 0" step="0.001" required /></label>
+          <button class="primary-button" type="submit" [disabled]="saving || deliveryForm.invalid">{{ saving ? 'Guardando…' : 'Guardar totales' }}</button>
+        </form>
+      }
+    </section>
+  }
+</app-shell>

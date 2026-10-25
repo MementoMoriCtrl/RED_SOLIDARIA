@@ -21,4 +21,15 @@ public class Need {
     @Column(columnDefinition = "TEXT") private String observaciones;
     @OneToMany(mappedBy = "necesidad") private List<DeliveryLine> entregas = new ArrayList<>();
     protected Need() {}
+    public Need(AffectedZone zona, Resource recurso, BigDecimal cantidad, String prioridad, String observaciones) {
+        this.zona = zona; this.recurso = recurso; this.cantidadRequerida = cantidad;
+        this.prioridad = prioridad; this.observaciones = observaciones; this.estado = "PENDIENTE";
+    }
+    public Long getId() { return id; }
+    public AffectedZone getZona() { return zona; }
+    public Resource getRecurso() { return recurso; }
+    public BigDecimal getCantidadRequerida() { return cantidadRequerida; }
+    public String getPrioridad() { return prioridad; }
+    public String getEstado() { return estado; }
+    public String getObservaciones() { return observaciones; }
 }

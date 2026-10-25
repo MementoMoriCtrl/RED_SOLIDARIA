@@ -1,7 +1,17 @@
 import { Routes } from '@angular/router';
-import { administratorGuard, authenticatedGuard } from './auth/auth.guards';
+import { administratorGuard, authenticatedGuard, donationRegistrationGuard } from './auth/auth.guards';
 
 export const routes: Routes = [
+  {
+    path: 'donaciones/registro', canActivate: [donationRegistrationGuard],
+    data: { donationPage: 'registration' },
+    loadComponent: () => import('./donations/donation-registration-page.component').then(module => module.DonationRegistrationPageComponent),
+  },
+  {
+    path: 'admin/catalogos-donaciones', canActivate: [administratorGuard],
+    data: { donationPage: 'catalogs' },
+    loadComponent: () => import('./donations/donation-registration-page.component').then(module => module.DonationRegistrationPageComponent),
+  },
   {
     path: 'acceso-organizaciones',
     loadComponent: () => import('./auth/organization-login-page.component')
@@ -24,6 +34,24 @@ export const routes: Routes = [
     canActivate: [administratorGuard],
     loadComponent: () => import('./donations/donation-administration-detail-page.component')
       .then((module) => module.DonationAdministrationDetailPageComponent),
+  },
+  {
+    path: 'admin/auditoria',
+    canActivate: [administratorGuard],
+    loadComponent: () => import('./audit/audit-page.component')
+      .then((module) => module.AuditPageComponent),
+  },
+  {
+    path: 'admin/emergencias',
+    canActivate: [administratorGuard],
+    loadComponent: () => import('./emergencies/emergency-management-page.component')
+      .then((module) => module.EmergencyManagementPageComponent),
+  },
+  {
+    path: 'admin/emergencias/:id/zonas/:zoneId/necesidades',
+    canActivate: [administratorGuard],
+    loadComponent: () => import('./needs/need-management-page.component')
+      .then((module) => module.NeedManagementPageComponent),
   },
   {
     path: 'recursos',

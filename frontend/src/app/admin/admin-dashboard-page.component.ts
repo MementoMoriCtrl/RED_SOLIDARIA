@@ -50,8 +50,4 @@ export class AdminDashboardPageComponent implements OnInit {
     });
   }
 
-  cerrarSesion(): void {
-    this.auth.logout();
-    void this.router.navigateByUrl('/acceso-organizaciones');
-  }
 }

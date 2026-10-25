@@ -85,12 +85,14 @@ public class DonationRegistrationService {
         if (foundResources.size() != request.detalles().size()) {
             throw notFound("Uno o más recursos no existen");
         }
+        if (foundResources.stream().anyMatch(resource -> !"ACTIVO".equals(resource.getEstado())))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Los recursos deben estar activos");
         Map<Long, Resource> resourcesById = foundResources.stream()
                 .collect(Collectors.toMap(Resource::getId, Function.identity()));
 
         String trackingCode = nextAvailableCode();
         Donation donation = new Donation(donor, emergency, center, responsible, trackingCode,
-                LocalDateTime.now(), INITIAL_STATE, clean(request.observaciones()));
+                null, INITIAL_STATE, clean(request.observaciones()));
         try {
             donation = donations.saveAndFlush(donation);
         } catch (DataIntegrityViolationException duplicateOrConstraintFailure) {
@@ -125,6 +127,10 @@ public class DonationRegistrationService {
         if (request == null || request.detalles() == null || request.detalles().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La donación debe incluir al menos un detalle");
         }
+        if (request.donanteId() == null || request.donanteId() <= 0
+                || (request.ubicacion() != null && request.ubicacion().length() > 200)
+                || (request.observaciones() != null && request.observaciones().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 65535))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa donante, ubicación y observaciones");
         Set<Long> resourceIds = new HashSet<>();
         for (DonationLineRequest detail : request.detalles()) {
             if (detail == null || detail.recursoId() == null || detail.recursoId() <= 0 || !resourceIds.add(detail.recursoId())) {

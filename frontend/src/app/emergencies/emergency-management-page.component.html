@@ -1,0 +1,90 @@
+<app-shell breadcrumb="Administración / Emergencias" footerText="Gestión de emergencias">
+  <section class="intro" aria-labelledby="page-title">
+    <p class="eyebrow">ADMINISTRACIÓN</p>
+    <h1 id="page-title">Gestión de emergencias</h1>
+    <p class="intro-copy">Administra emergencias y las zonas afectadas asociadas.</p>
+  </section>
+
+  <form class="panel emergency-filters" (ngSubmit)="load(0)">
+    <label>Buscar por nombre o tipo
+      <input name="text" [(ngModel)]="text" maxlength="150" placeholder="Ej.: Inundación" autocomplete="off" />
+    </label>
+    <label>Estado
+      <input name="stateFilter" [(ngModel)]="stateFilter" maxlength="30" placeholder="Estado" autocomplete="off" />
+    </label>
+    <button class="primary-button" type="submit" [disabled]="loading">{{ loading ? 'Buscando…' : 'Buscar' }}</button>
+    <button class="secondary-button" type="button" [disabled]="saving || loadingDetail" (click)="newEmergency()">Nueva emergencia</button>
+  </form>
+
+  @if (error) { <div class="alert" role="alert">{{ error }}</div> }
+  @if (success) { <div class="success-message" role="status">{{ success }}</div> }
+  @if (loading) {
+    <section class="panel state-panel" role="status"><span class="spinner" aria-hidden="true"></span>Cargando emergencias…</section>
+  } @else if (!error && emergencies.length === 0) {
+    <section class="panel state-panel empty" role="status"><h2>No hay emergencias que coincidan</h2><p>Prueba con otros filtros o registra una emergencia.</p></section>
+  } @else if (!error) {
+    <section class="panel table-wrap" aria-label="Emergencias registradas">
+      <table>
+        <thead><tr><th>Emergencia</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Estado</th><th></th></tr></thead>
+        <tbody>@for (item of emergencies; track item.id) {
+          <tr>
+            <td><strong>{{ item.nombre }}</strong></td><td>{{ item.tipo }}</td>
+            <td>{{ item.fechaInicio | date:'dd/MM/yyyy' }}</td>
+            <td>{{ item.fechaFin ? (item.fechaFin | date:'dd/MM/yyyy') : '—' }}</td>
+            <td><span class="status-chip">{{ item.estado }}</span></td>
+            <td><button class="text-button" type="button" [disabled]="saving || loadingDetail" (click)="editEmergency(item)">Administrar</button></td>
+          </tr>
+        }</tbody>
+      </table>
+    </section>
+    <nav class="pagination" aria-label="Paginación de emergencias">
+      <span>Mostrando {{ firstResult }}–{{ lastResult }} de {{ totalElements }}</span>
+      <div><button class="secondary-button" type="button" [disabled]="page === 0 || loading" (click)="load(page - 1)">Anterior</button>
+        <span>Página {{ page + 1 }} de {{ totalPages || 1 }}</span>
+        <button class="secondary-button" type="button" [disabled]="last || loading" (click)="load(page + 1)">Siguiente</button></div>
+    </nav>
+  }
+
+  @if (loadingDetail) { <section class="panel state-panel" role="status">Cargando el detalle…</section> }
+  @if (selected && formOpen) { <app-emergency-balance [emergencyId]="selected.id" /> }
+  @if (formOpen) {
+    <section class="panel emergency-form-panel" aria-labelledby="form-title">
+      <div class="panel-heading"><div><p class="eyebrow">FICHA</p><h2 id="form-title">{{ editingId === null ? 'Registrar emergencia' : 'Editar emergencia' }}</h2></div>
+        <button class="text-button" type="button" [disabled]="saving || loadingDetail" (click)="closeForm()">Cerrar</button></div>
+      <form class="emergency-form" (ngSubmit)="saveEmergency()">
+        <label>Nombre<input name="name" [(ngModel)]="name" maxlength="150" required /></label>
+        <label>Tipo<input name="type" [(ngModel)]="type" maxlength="100" required /></label>
+        <label>Fecha de inicio<input name="startDate" type="date" [(ngModel)]="startDate" required /></label>
+        <label>Fecha de fin<input name="endDate" type="date" [(ngModel)]="endDate" /></label>
+        @if (editingId === null) {
+          <label>Estado inicial<input name="createState" [(ngModel)]="createState" maxlength="30" required /></label>
+        }
+        <label class="wide">Descripción<textarea name="description" [(ngModel)]="description" rows="3"></textarea></label>
+        <div class="form-actions wide"><button class="primary-button" type="submit" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar emergencia' }}</button></div>
+      </form>
+      @if (editingId !== null && selected) {
+        <section class="related-panel" aria-labelledby="zones-title">
+          <div class="panel-heading"><div><p class="eyebrow">UBICACIONES</p><h3 id="zones-title">Zonas afectadas</h3></div></div>
+          @if (selected.zonas.length === 0) { <p class="muted">Todavía no hay zonas asociadas.</p> }
+          @for (zone of selected.zonas; track zone.id) {
+            <article class="zone-row"><div><strong>{{ zone.nombre }}</strong><span>{{ zone.ubicacion || 'Ubicación no especificada' }}</span></div>
+              <a [routerLink]="['/admin/emergencias', selected.id, 'zonas', zone.id, 'necesidades']">Necesidades y entregas</a>
+              <button class="text-button" type="button" [disabled]="saving || loadingDetail" (click)="editZone(zone)">Editar zona</button></article>
+          }
+          <form class="emergency-form zone-form" (ngSubmit)="saveZone()">
+            <label>Nombre de la zona<input name="zoneName" [(ngModel)]="zoneName" maxlength="150" required /></label>
+            <label>Ubicación<input name="zoneLocation" [(ngModel)]="zoneLocation" maxlength="200" /></label>
+            <label class="wide">Descripción<textarea name="zoneDescription" [(ngModel)]="zoneDescription" rows="2"></textarea></label>
+            <div class="form-actions wide"><button class="primary-button" type="submit" [disabled]="saving">{{ saving ? 'Guardando…' : (zoneId === null ? 'Añadir zona' : 'Guardar zona') }}</button>
+              @if (zoneId !== null) { <button class="secondary-button" type="button" (click)="zoneId = null; zoneName = ''; zoneLocation = ''; zoneDescription = ''">Cancelar edición</button> }</div>
+          </form>
+        </section>
+        <section class="related-panel state-form" aria-labelledby="state-title">
+          <div><p class="eyebrow">SEGUIMIENTO</p><h3 id="state-title">Cambiar estado</h3><p class="muted">Ingresa el valor de estado utilizado por el sistema.</p></div>
+          <form (ngSubmit)="saveState()"><label>Estado<input name="nextState" [(ngModel)]="nextState" maxlength="30" required /></label>
+            <button class="primary-button" type="submit" [disabled]="saving">{{ saving ? 'Guardando…' : 'Actualizar estado' }}</button></form>
+        </section>
+      }
+    </section>
+  }
+</app-shell>

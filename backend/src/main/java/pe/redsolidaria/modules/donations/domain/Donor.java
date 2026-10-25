@@ -12,6 +12,7 @@ public class Donor {
     @Column(name = "creado_en", insertable = false, updatable = false) private LocalDateTime creadoEn;
     @OneToMany(mappedBy = "donante") private List<Donation> donaciones = new ArrayList<>();
     protected Donor() {}
+    public Donor(String nombre) { this.nombre = nombre; }
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
 }
