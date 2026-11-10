@@ -57,7 +57,11 @@ public final class DonationDtos {
                                               BigDecimal cantidadRecibidaAcopio, String unidadCodigo,
                                               String unidadNombre, String unidadSimbolo) {}
     public record PublicDonationMovementSummary(String estadoAnterior, String estadoNuevo,
-                                                LocalDateTime fechaHora, String ubicacion) {}
+                                                LocalDateTime fechaHora, String ubicacion, String descripcion) {
+        public PublicDonationMovementSummary(String estadoAnterior,String estadoNuevo,LocalDateTime fechaHora,String ubicacion) {
+            this(estadoAnterior,estadoNuevo,fechaHora,ubicacion,"Movimiento registrado");
+        }
+    }
     public record PublicDonationTraceResponse(String codigoTrazabilidad, LocalDateTime fechaRegistro,
                                              LocalDateTime fechaIngreso, String estado,
                                              PublicCollectionCenterSummary centroAcopio,

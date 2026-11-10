@@ -15,6 +15,9 @@ public class DonationMovement {
     @Column(name = "fecha_hora", nullable = false, insertable = false, updatable = false) private LocalDateTime fechaHora;
     @Column(length = 200) private String ubicacion;
     @Column(columnDefinition = "TEXT") private String observaciones;
+    @Column(name="tipo_evento",length=50) private String tipoEvento;
+    public DonationMovement conTipo(String tipo) { this.tipoEvento=tipo; return this; }
+    public String getTipoEvento() { return tipoEvento; }
     protected DonationMovement() {}
 
     public DonationMovement(Donation donacion, UserAccount responsable, String estadoAnterior,

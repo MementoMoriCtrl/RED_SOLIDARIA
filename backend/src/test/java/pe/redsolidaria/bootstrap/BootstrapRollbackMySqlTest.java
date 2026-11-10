@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import pe.redsolidaria.test.RequiresLocalRedSolidariaMySql;
+import pe.redsolidaria.test.StrictTestMySqlSupport;
 import pe.redsolidaria.modules.access.persistence.PermissionRepository;
 import pe.redsolidaria.modules.access.persistence.RoleRepository;
 import pe.redsolidaria.modules.access.persistence.UserRepository;
@@ -22,9 +22,7 @@ import pe.redsolidaria.modules.access.persistence.UserRepository;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("local-bootstrap")
 @Import(BootstrapRollbackMySqlTest.FailingEncoderConfiguration.class)
-@RequiresLocalRedSolidariaMySql
-class BootstrapRollbackMySqlTest {
-    @Autowired BootstrapDatabaseGuard databaseGuard;
+class BootstrapRollbackMySqlTest extends StrictTestMySqlSupport {
     @Autowired BootstrapAdminService bootstrap;
     @Autowired RoleRepository roles;
     @Autowired PermissionRepository permissions;
@@ -32,7 +30,7 @@ class BootstrapRollbackMySqlTest {
 
     @Test
     void rollsBackRolePermissionAndUserWritesWhenHashingFails() {
-        databaseGuard.verify();
+        verifyTestDatabase();
         Assumptions.assumeFalse(bootstrap.administratorExists(), "Ya existe un administrador válido");
         Assumptions.assumeFalse(roles.existsByCodigo(BootstrapAdminService.ROLE_CODE), "El rol reservado ya existe y requiere revisión manual");
         boolean permissionExistedBefore = permissions.findByCodigo(BootstrapAdminService.ADMIN_PERMISSION).isPresent();

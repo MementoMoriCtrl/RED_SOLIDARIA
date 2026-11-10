@@ -35,12 +35,13 @@ public class DeliveryManagementService {
     private final AuditRecordRepository audit;
     private final EntityManager entityManager;
     private final JsonMapper json;
+    private final pe.redsolidaria.modules.logistics.LogisticsRepository logistics;
 
     public DeliveryManagementService(NeedRepository needs, DonationRepository donations, DonationLineRepository sources,
             DeliveryRepository deliveries, DeliveryLineRepository lines, UserRepository users,
-            AuditRecordRepository audit, EntityManager entityManager, JsonMapper json) {
+            AuditRecordRepository audit, EntityManager entityManager, JsonMapper json, pe.redsolidaria.modules.logistics.LogisticsRepository logistics) {
         this.needs = needs; this.donations = donations; this.sources = sources; this.deliveries = deliveries;
-        this.lines = lines; this.users = users; this.audit = audit; this.entityManager = entityManager; this.json = json;
+        this.lines = lines; this.users = users; this.audit = audit; this.entityManager = entityManager; this.json = json; this.logistics = logistics;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -70,8 +71,8 @@ public class DeliveryManagementService {
         if (!NeedManagementService.USABLE_STATES.contains(donation.getEstado())
                 || !"ACTIVO".equals(need.getRecurso().getEstado()) || !"PENDIENTE".equals(need.getEstado()))
             throw conflict("El estado actual de la donación, recurso o necesidad no admite esta operación");
-        if (lines.assignedToDonation(sourceId).add(assignDelta).compareTo(source.getCantidadRecibidaAcopio()) > 0)
-            throw conflict("La asignación supera lo realmente recibido y disponible en acopio");
+        if (assignDelta.signum() > 0 && lines.distributionAssigned(sourceId).add(assignDelta).compareTo(logistics.received(sourceId)) > 0)
+            throw conflict("La asignación supera lo confirmado y disponible en distribución");
         if (lines.assignedToNeed(needId).add(assignDelta).compareTo(need.getCantidadRequerida()) > 0)
             throw conflict("La asignación supera la cantidad requerida por la necesidad");
         var delivery = deliveries.saveAndFlush(new Delivery(actor));
@@ -82,6 +83,12 @@ public class DeliveryManagementService {
                 json.writeValueAsString(Map.of("necesidadId", needId, "detalleDonacionId", sourceId,
                         "totalAsignado", request.totalAsignado(), "totalEntregado", request.totalEntregado(),
                         "incrementoAsignado", assignDelta, "incrementoEntregado", deliverDelta))));
+        if (assignDelta.signum()>0) entityManager.persist(new pe.redsolidaria.modules.donations.domain.DonationMovement(donation,actor,
+                donation.getEstado(),donation.getEstado(),need.getZona().getNombre(),
+                "Necesidad " + needId + ": asignación +" + assignDelta.toPlainString()).conTipo("ASIGNACION_RECURSOS"));
+        if (deliverDelta.signum()>0) entityManager.persist(new pe.redsolidaria.modules.donations.domain.DonationMovement(donation,actor,
+                donation.getEstado(),donation.getEstado(),need.getZona().getNombre(),
+                "Necesidad " + needId + ": entrega final +" + deliverDelta.toPlainString()).conTipo("ENTREGA_POBLACION"));
         return new DeliveryResponse(delivery.getId(), request.totalAsignado(), request.totalEntregado(), false);
     }
 

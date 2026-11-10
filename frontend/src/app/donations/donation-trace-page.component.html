@@ -88,7 +88,7 @@
                 <thead>
                   <tr>
                     <th scope="col">Recurso</th>
-                    <th scope="col">Cantidad donada</th>
+                    <th scope="col">Declarada preliminar</th>
                     <th scope="col">Recibida en acopio</th>
                     <th scope="col">Unidad</th>
                   </tr>
@@ -124,7 +124,7 @@
               @for (movimiento of donacion.movimientos; track $index) {
                 <li class="timeline-entry">
                   <span class="timeline-marker" aria-hidden="true"></span>
-                  <article class="movement-card">
+                  <article class="movement-card"><p>{{ movimiento.descripcion || "Movimiento registrado" }}</p>
                     <div class="movement-topline">
                       <time>{{ movimiento.fechaHora ? (movimiento.fechaHora | date:'dd/MM/yyyy, HH:mm') : 'Fecha no disponible' }}</time>
                       <span class="movement-state">

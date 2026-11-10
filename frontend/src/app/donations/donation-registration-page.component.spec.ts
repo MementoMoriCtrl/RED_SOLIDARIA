@@ -63,7 +63,7 @@ describe('DonationRegistrationPageComponent', () => {
     request.flush({ id: 5, codigoTrazabilidad: 'RS-FIXTURE' });
     await fixture.whenStable();
     expect(component.saving).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('Aún no se ha recibido ni entregado');
+    expect(fixture.nativeElement.textContent).toContain('pendiente de verificación');
   });
   it('loads another catalog page without dropping previous choices', async () => {
     fixture.componentInstance.search('donantes', true);
@@ -108,7 +108,7 @@ describe('DonationRegistrationPageComponent', () => {
   });
   it('shows only registration and a link to catalog administration for an authorized administrator', () => {
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('h1').textContent).toBe('Registro de donaciones');
+    expect(fixture.nativeElement.querySelector('h1').textContent).toBe('Registro de donaciones presentadas');
     expect(fixture.nativeElement.querySelector('form #select-donantes')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('input[name="catalogName"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('input[name="unitCode"]')).toBeNull();
@@ -138,7 +138,7 @@ describe('DonationRegistrationPageComponent', () => {
     expect(fixture.nativeElement.querySelector('input[name="unitCode"]')).toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.panel ul li').length).toBe(1);
     expect([...fixture.nativeElement.querySelectorAll('[role="tab"]')].map((tab: any) => tab.textContent.trim()))
-      .toEqual(['Donantes', 'Centros de acopio', 'Unidades de medida']);
+      .toEqual(['Donantes', 'Centros de acopio', 'Centros de distribución', 'Unidades de medida']);
     const component = fixture.componentInstance;
     component.donorId = 1; component.emergencyId = 1; component.lines = [{ recursoId: 3, cantidad: 1 }];
     component.register(); http.expectNone('/api/donaciones');

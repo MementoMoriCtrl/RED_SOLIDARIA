@@ -1,0 +1,54 @@
+﻿<app-shell breadcrumb="Administración / Logística" footerText="Traslados y distribución">
+  <section class="intro"><p class="eyebrow">LOGÍSTICA</p><h1>Traslados y distribución</h1>
+    <p>Acopio recibe donaciones. Distribución recibe traslados y abastece las necesidades de las zonas.</p>
+    <a routerLink="/admin/catalogos-donaciones">Administrar centros</a> · <a routerLink="/admin/emergencias">Necesidades y entregas por zona</a>
+  </section>
+  @if (error) { <p class="alert" role="alert">{{ error }}</p> }
+  @if (success) { <p role="status">{{ success }}</p> }
+  @if (pending) {
+    <section class="panel"><h2>Operación pendiente de confirmación</h2><p>UUID: {{ pending.request.operacionId }}. Los datos se conservan para evitar duplicaciones.</p>
+      <button type="button" [disabled]="saving" (click)="retry()">Reintentar la misma operación</button></section>
+  }
+  <button type="button" [disabled]="loading || saving" (click)="load()">Recargar existencias e historial</button>
+  @if (loading) { <p role="status">Cargando logística…</p> }
+  @else {
+    <section class="panel"><h2>Existencias por lote de donación</h2>
+      <p>Los saldos son calculados. Las reservas anteriores a este modelo permanecen separadas y requieren conciliación; no se inventan recepciones.</p>
+      <div class="table-wrap"><table><thead><tr><th>Donación / acopio</th><th>Recurso / unidad</th><th>Recibida acopio</th><th>Libre acopio</th><th>Trasladada</th><th>En tránsito</th><th>Recibida distribución</th><th>Libre distribución</th><th>Diferencia</th><th>Reserva histórica</th><th></th></tr></thead>
+        <tbody>@for (row of stock; track row.detalleDonacionId) {
+          <tr><td>{{ row.codigoTrazabilidad }} / {{ row.centroAcopio || 'Sin centro: conciliar' }}</td><td>{{ row.recurso }} / {{ row.unidad }}</td>
+            <td>{{ row.recibidaAcopio | number:'1.0-3' }}</td><td>{{ row.disponibleAcopio | number:'1.0-3' }}</td><td>{{ row.trasladada | number:'1.0-3' }}</td>
+            <td>{{ row.enTransito | number:'1.0-3' }}</td><td>{{ row.recibidaDistribucion | number:'1.0-3' }}</td><td>{{ row.disponibleDistribucion | number:'1.0-3' }}</td>
+            <td>{{ row.diferencia | number:'1.0-3' }}</td><td>{{ row.reservaHistoricaSinDistribucion | number:'1.0-3' }}</td>
+            <td><button type="button" [disabled]="saving || !!pending || !row.centroAcopioId || row.disponibleAcopio <= 0" (click)="selectSource(row)">Trasladar</button></td></tr>
+        } @empty { <tr><td colspan="11">No hay lotes en esta página.</td></tr> }</tbody></table></div>
+      <nav aria-label="Páginas de existencias"><button [disabled]="stockPage === 0" (click)="stockPage = stockPage - 1; load()">Anterior</button><span>Página {{ stockPage + 1 }}</span><button [disabled]="stock.length < 20" (click)="stockPage = stockPage + 1; load()">Siguiente</button></nav>
+    </section>
+    @if (source && !pending) {
+      <section class="panel"><h2>Salida de {{ source.recurso }} desde {{ source.centroAcopio }}</h2><p>Disponible: {{ source.disponibleAcopio }} {{ source.unidad }}. Una salida todavía no es recepción en distribución.</p>
+        <form #dispatchForm="ngForm" (ngSubmit)="dispatch()"><fieldset [disabled]="saving">
+          <label>Centro de distribución<select name="destination" [(ngModel)]="destination" required><option [ngValue]="null">Selecciona destino</option>@for (center of centers; track center.id) { <option [ngValue]="center.id">{{ center.nombre }}</option> }</select></label>
+          <label>Cantidad enviada ({{ source.unidad }})<input name="quantity" type="number" [(ngModel)]="quantity" min="0.001" [max]="source.disponibleAcopio" step="0.001" required /></label>
+          <label>Observaciones<textarea name="notes" [(ngModel)]="notes" maxlength="2000"></textarea></label>
+          <button class="primary-button" [disabled]="dispatchForm.invalid" type="submit">Registrar salida</button></fieldset></form>
+      </section>
+    }
+    <section class="panel"><h2>Historial de traslados</h2><div class="table-wrap"><table><thead><tr><th>Operación / lote</th><th>Origen → destino</th><th>Recurso / unidad</th><th>Enviada</th><th>Recibida</th><th>Estado</th><th>Salida / responsable</th><th>Recepción / responsable</th><th>Observaciones</th><th></th></tr></thead>
+      <tbody>@for (row of transfers; track row.operacionId) {
+        <tr><td>{{ row.operacionId }} / {{ row.detalleDonacionId }}</td><td>{{ row.origen }} → {{ row.destino }}</td><td>{{ row.recurso }} / {{ row.unidad }}</td>
+          <td>{{ row.cantidadEnviada | number:'1.0-3' }}</td><td>{{ row.cantidadRecibida | number:'1.0-3' }}</td><td>{{ row.estado }}</td>
+          <td>{{ row.fechaSalida | date:'dd/MM/yyyy HH:mm' }} / {{ row.responsableSalida }}</td><td>{{ row.fechaRecepcion | date:'dd/MM/yyyy HH:mm' }} / {{ row.responsableRecepcion }}</td>
+          <td>{{ row.observaciones }} {{ row.observacionesRecepcion }}</td><td>@if (row.estado === 'EN_TRANSITO') { <button [disabled]="saving || !!pending" (click)="selectTransfer(row)">Confirmar recepción</button> }</td></tr>
+      } @empty { <tr><td colspan="10">No hay traslados en esta página.</td></tr> }</tbody></table></div>
+      <nav aria-label="Páginas de traslados"><button [disabled]="historyPage === 0" (click)="historyPage = historyPage - 1; load()">Anterior</button><span>Página {{ historyPage + 1 }}</span><button [disabled]="transfers.length < 20" (click)="historyPage = historyPage + 1; load()">Siguiente</button></nav>
+    </section>
+    @if (selectedTransfer && !pending) {
+      <section class="panel"><h2>Recepción en {{ selectedTransfer.destino }}</h2><p>Operación {{ selectedTransfer.operacionId }}. Las diferencias quedan registradas sin devolver existencias automáticamente al origen.</p>
+        <form #receiveForm="ngForm" (ngSubmit)="receive()"><fieldset [disabled]="saving">
+          <label>Cantidad recibida ({{ selectedTransfer.unidad }})<input name="received" type="number" [(ngModel)]="received" min="0" [max]="selectedTransfer.cantidadEnviada" step="0.001" required /></label>
+          <label>Observaciones de recepción<textarea name="receiptNotes" [(ngModel)]="receiptNotes" maxlength="2000"></textarea></label>
+          <button type="submit" class="primary-button" [disabled]="receiveForm.invalid">Confirmar recepción física</button></fieldset></form>
+      </section>
+    }
+  }
+</app-shell>

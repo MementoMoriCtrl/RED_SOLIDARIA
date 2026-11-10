@@ -30,8 +30,7 @@ public class SecurityConfiguration {
         return correo -> users.findByCorreo(correo.trim().toLowerCase(Locale.ROOT))
                 .map(account -> User.withUsername(account.getCorreo())
                         .password(account.getPasswordHash())
-                        .authorities(account.getRol().getAsignaciones().stream()
-                                .map(assignment -> assignment.getPermiso().getCodigo()).toArray(String[]::new))
+                        .authorities(account.permisosEfectivos().toArray(String[]::new))
                         .disabled(!"ACTIVO".equalsIgnoreCase(account.getEstado()))
                         .build())
                 .orElseThrow(() -> new UsernameNotFoundException("Credenciales no válidas"));

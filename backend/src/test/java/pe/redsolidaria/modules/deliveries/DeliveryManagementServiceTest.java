@@ -40,8 +40,9 @@ class DeliveryManagementServiceTest {
     Emergency emergency = mock(Emergency.class);
     AffectedZone zone = mock(AffectedZone.class);
     Resource resource = mock(Resource.class);
+    pe.redsolidaria.modules.logistics.LogisticsRepository logistics = mock(pe.redsolidaria.modules.logistics.LogisticsRepository.class);
     DeliveryManagementService service = new DeliveryManagementService(needs, donations, sources, deliveries,
-            lines, users, audit, em, JsonMapper.builder().build());
+            lines, users, audit, em, JsonMapper.builder().build(), logistics);
     static BigDecimal q(String value) { return new BigDecimal(value); }
     SaveDeliveryRequest request(String assigned, String delivered) { return new SaveDeliveryRequest(q(assigned), q(delivered)); }
 
@@ -63,6 +64,8 @@ class DeliveryManagementServiceTest {
         when(need.getEstado()).thenReturn("PENDIENTE");
         when(donation.getEstado()).thenReturn("REGISTRADA");
         when(source.getCantidadRecibidaAcopio()).thenReturn(q("10"));
+        when(logistics.received(10L)).thenReturn(q("10"));
+        when(lines.distributionAssigned(10L)).thenAnswer(call -> lines.assignedToDonation(10L));
         when(users.findByCorreo("admin@example.test")).thenReturn(Optional.of(mock(UserAccount.class)));
         when(lines.assignedToPair(1L, 10L)).thenReturn(q("0"));
         when(lines.deliveredToPair(1L, 10L)).thenReturn(q("0"));
@@ -116,8 +119,15 @@ class DeliveryManagementServiceTest {
         verifyNoInteractions(deliveries, audit);
     }
 
+    @Test void cannotAllocateCollectionStockBeforeDistributionConfirmsReceipt() {
+        when(logistics.received(10L)).thenReturn(BigDecimal.ZERO);
+        assertEquals(409, assertThrows(ResponseStatusException.class,
+            () -> service.save(1,10,"admin@example.test",request("1","0"))).getStatusCode().value());
+        verifyNoInteractions(deliveries,audit);
+    }
     @Test void neverTreatsAPledgeAsReceivedStock() {
         when(source.getCantidadRecibidaAcopio()).thenReturn(q("0"));
+        when(logistics.received(10L)).thenReturn(q("0"));
         assertThrows(ResponseStatusException.class, () -> service.save(1, 10, "admin@example.test", request("1", "0")));
         verifyNoInteractions(deliveries, audit);
     }

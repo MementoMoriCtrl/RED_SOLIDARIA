@@ -39,9 +39,7 @@ public class AccessManagementService {
         UserAccount user = users.findByCorreo(correo)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         Role role = user.getRol();
-        Set<String> effectivePermissions = role.getAsignaciones().stream()
-                .map(assignment -> assignment.getPermiso().getCodigo())
-                .collect(Collectors.toUnmodifiableSet());
+        Set<String> effectivePermissions = user.permisosEfectivos();
         return new AuthenticatedProfileResponse(user.getNombre(), user.getApellido(), user.getCorreo(),
                 role.getCodigo(), role.getNombre(), effectivePermissions);
     }
@@ -83,6 +81,9 @@ public class AccessManagementService {
         Role role = role(id);
         List<Permission> found = permissions.findAllById(request.permisoIds());
         if (found.size() != request.permisoIds().size()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Uno o más permisos no existen");
+        if (found.stream().anyMatch(p -> UserAccount.MASTER_PERMISSION.equals(p.getCodigo()))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "ADMIN_MAESTRO es exclusivo de la cuenta y no se asigna a roles");
+        }
         boolean alreadyHasAdminAccess = role.getAsignaciones().stream()
                 .anyMatch(assignment -> ADMIN_ACCESS_PERMISSION.equals(assignment.getPermiso().getCodigo()));
         boolean requestGrantsAdminAccess = found.stream()
@@ -97,6 +98,9 @@ public class AccessManagementService {
 
     @Transactional
     public PermissionResponse createPermission(CreatePermissionRequest request) {
+        if (UserAccount.MASTER_PERMISSION.equalsIgnoreCase(request.codigo().trim())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Permiso reservado al procedimiento controlado");
+        }
         if (permissions.existsByCodigo(request.codigo())) throw new ResponseStatusException(HttpStatus.CONFLICT, "El código de permiso ya existe");
         return permissionResponse(permissions.save(new Permission(request.codigo().trim(), request.descripcion())));
     }

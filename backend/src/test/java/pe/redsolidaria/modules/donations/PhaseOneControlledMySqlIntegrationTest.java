@@ -32,6 +32,7 @@ import pe.redsolidaria.test.ControlledTestMySqlCondition;
 
 @SpringBootTest(properties = {"spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=validate"})
 @ExtendWith(ControlledTestMySqlCondition.class)
+@org.springframework.security.test.context.support.WithMockUser(authorities="ACCESO_ADMINISTRAR")
 class PhaseOneControlledMySqlIntegrationTest {
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> System.getenv("TEST_DB_URL"));
@@ -43,26 +44,31 @@ class PhaseOneControlledMySqlIntegrationTest {
     @Autowired DonationReceiptService receipts;
     @Autowired DeliveryManagementService deliveries;
     @Autowired EmergencyBalanceRepository balances;
+    @Autowired pe.redsolidaria.modules.logistics.LogisticsService logistics;
     @MockitoSpyBean AuditRecordRepository audit;
-    long donationId, lineId, resourceId, emergencyId, need1, need2;
+    long donationId, lineId, resourceId, emergencyId, need1, need2, distributionId;
     String email;
 
     @BeforeEach void fixturesInDedicatedDatabaseOnly() {
         assertEquals("red_solidaria_test", jdbc.queryForObject("select database()", String.class));
-        assertEquals(2L, jdbc.queryForObject("select count(*) from flyway_schema_history where version in ('1','2') and success = 1", Long.class));
+        assertEquals(4L, jdbc.queryForObject("select count(*) from flyway_schema_history where version in ('1','2','3','4') and success = 1", Long.class));
         new TransactionTemplate(tx).executeWithoutResult(status -> {
             String token = UUID.randomUUID().toString();
             email = token + "@integration.test";
             long role = insert("insert into rol(codigo,nombre) values (?,?)", "IT-" + token, "Integration fixture");
             long actor = insert("insert into usuario(id_rol,nombre,apellido,correo,password_hash,estado) values (?,?,?,?,?,?)",
                     role, "Integration", "Fixture", email, "unused-no-login", "ACTIVO");
+            long registrar=insert("insert into usuario(id_rol,nombre,apellido,correo,password_hash,estado) values (?,?,?,?,?,?)",
+                    role,"Registrador","Fixture",token+"-registrar@integration.test","unused-no-login","ACTIVO");
             long donor = insert("insert into donante(nombre) values (?)", "IT-" + token);
             long unit = insert("insert into unidad_medida(codigo,nombre) values (?,?)", token.substring(0, 30), "Integration unit");
             resourceId = insert("insert into recurso(id_unidad_medida,nombre,categoria,estado) values (?,?,?,?)", unit, "IT-" + token, "IT", "ACTIVO");
             emergencyId = insert("insert into emergencia(nombre,tipo,fecha_inicio,estado) values (?,?,?,?)", "IT-" + token, "TEST", java.sql.Date.valueOf("2026-01-01"), "ACTIVA");
             long zone = insert("insert into zona_afectada(id_emergencia,nombre) values (?,?)", emergencyId, "Integration zone");
-            donationId = insert("insert into donacion(id_donante,id_emergencia,id_usuario_registro,codigo_trazabilidad,estado) values (?,?,?,?,?)",
-                    donor, emergencyId, actor, "IT-" + token, "REGISTRADA");
+            long collectionId = insert("insert into centro_acopio(nombre) values (?)", "IT-acopio-" + token);
+            distributionId = insert("insert into centro_distribucion(nombre) values (?)", "IT-distribucion-" + token);
+            donationId = insert("insert into donacion(id_donante,id_emergencia,id_centro_acopio,id_usuario_registro,codigo_trazabilidad,estado) values (?,?,?,?,?,?)",
+                    donor, emergencyId, collectionId, registrar, "IT-" + token, "REGISTRADA");
             lineId = insert("insert into detalle_donacion(id_donacion,id_recurso,cantidad_donada) values (?,?,?)", donationId, resourceId, new BigDecimal("10.000"));
             need1 = insert("insert into necesidad(id_zona_afectada,id_recurso,cantidad_requerida,prioridad,estado) values (?,?,?,?,?)", zone, resourceId, 8, "ALTA", "PENDIENTE");
             need2 = insert("insert into necesidad(id_zona_afectada,id_recurso,cantidad_requerida,prioridad,estado) values (?,?,?,?,?)", zone, resourceId, 8, "ALTA", "PENDIENTE");
@@ -92,6 +98,10 @@ class PhaseOneControlledMySqlIntegrationTest {
     }
     @Test void competingNeedsCannotOverallocateAndDeliveryDoesNotReserveStockTwice() throws Exception {
         receipts.register(donationId, email, receipt("10"));
+        var dispatch = new pe.redsolidaria.modules.logistics.LogisticsDtos.Dispatch(UUID.randomUUID(),lineId,distributionId,new BigDecimal("10"),null);
+        logistics.dispatch(dispatch,email);
+        assertThrows(ResponseStatusException.class, () -> deliveries.save(need1,lineId,email,new SaveDeliveryRequest(BigDecimal.ONE,BigDecimal.ZERO)));
+        logistics.receive(dispatch.operacionId().toString(),new pe.redsolidaria.modules.logistics.LogisticsDtos.Receive(UUID.randomUUID(),new BigDecimal("10"),null),email);
         var results = parallel(() -> allocate(need1), () -> allocate(need2));
         assertEquals(1, results.stream().filter(value -> value.equals("OK")).count());
         assertEquals(1, results.stream().filter(value -> value.equals("409")).count());
@@ -108,6 +118,67 @@ class PhaseOneControlledMySqlIntegrationTest {
         assertEquals(0, balance.entregada().compareTo(new BigDecimal("5")));
         assertEquals(0, balance.disponible().compareTo(new BigDecimal("2")));
         assertEquals(0, balance.faltanteAbastecimiento().compareTo(new BigDecimal("6")));
+    }
+    @Test void logisticsRetriesAndPartialDeliveryForA100KgNeed() throws Exception {
+        jdbc.update("update necesidad set cantidad_requerida=100 where id_necesidad=?",need1);
+        receipts.register(donationId,email,receipt("10"));
+        var sent=new pe.redsolidaria.modules.logistics.LogisticsDtos.Dispatch(UUID.randomUUID(),lineId,distributionId,new BigDecimal("10"),"Lote de arroz");
+        parallel(() -> logistics.dispatch(sent,email),() -> logistics.dispatch(sent,email));
+        assertEquals(1L,jdbc.queryForObject("select count(*) from traslado_recurso where id_detalle_donacion=?",Long.class,lineId));
+        assertEquals(0,balances.balance(emergencyId).getFirst().disponible().signum());
+        var received=new pe.redsolidaria.modules.logistics.LogisticsDtos.Receive(UUID.randomUUID(),new BigDecimal("9"),"Diferencia de 1 kg");
+        parallel(() -> logistics.receive(sent.operacionId().toString(),received,email),() -> logistics.receive(sent.operacionId().toString(),received,email));
+        assertEquals("RECIBIDO_CON_DIFERENCIA",logistics.receive(sent.operacionId().toString(),received,email).estado());
+        deliveries.save(need1,lineId,email,new SaveDeliveryRequest(new BigDecimal("8"),new BigDecimal("3")));
+        var balance=balances.balance(emergencyId).getFirst();
+        assertEquals(0,balance.disponible().compareTo(BigDecimal.ONE));
+        assertEquals(0,balance.trasladada().compareTo(new BigDecimal("10")));
+        assertEquals(0,balance.recibidaDistribucion().compareTo(new BigDecimal("9")));
+        assertEquals(0,balance.diferencia().compareTo(BigDecimal.ONE));
+        assertEquals(0,balance.entregada().compareTo(new BigDecimal("3")));
+        assertEquals(0,jdbc.queryForObject("select count(*) from traslado_recurso where id_detalle_donacion=? and estado='EN_TRANSITO'",Integer.class,lineId));
+    }
+    @Test void auditFailureRollsBackDispatchAndItsDurableIdentity() {
+        receipts.register(donationId,email,receipt("10"));
+        doThrow(new IllegalStateException("Injected audit failure")).when(audit).saveAndFlush(any(AuditRecord.class));
+        var sent=new pe.redsolidaria.modules.logistics.LogisticsDtos.Dispatch(UUID.randomUUID(),lineId,distributionId,new BigDecimal("10"),null);
+        assertThrows(IllegalStateException.class,() -> logistics.dispatch(sent,email));
+        assertEquals(0L,jdbc.queryForObject("select count(*) from traslado_recurso where id_detalle_donacion=?",Long.class,lineId));
+    }
+    @Test void auditFailureRollsBackDistributionReceipt() {
+        receipts.register(donationId,email,receipt("10"));
+        var sent=new pe.redsolidaria.modules.logistics.LogisticsDtos.Dispatch(UUID.randomUUID(),lineId,distributionId,new BigDecimal("10"),null);
+        logistics.dispatch(sent,email);
+        doThrow(new IllegalStateException("Injected audit failure")).when(audit).saveAndFlush(any(AuditRecord.class));
+        var received=new pe.redsolidaria.modules.logistics.LogisticsDtos.Receive(UUID.randomUUID(),new BigDecimal("10"),null);
+        assertThrows(IllegalStateException.class,() -> logistics.receive(sent.operacionId().toString(),received,email));
+        assertEquals("EN_TRANSITO",jdbc.queryForObject("select estado from traslado_recurso where operacion_id=?",String.class,sent.operacionId().toString()));
+        assertEquals(0,balances.balance(emergencyId).getFirst().disponible().signum());
+    }
+    @Test void surplusAuthorizationIsDurable() {
+        var request=new RegisterReceiptRequest(List.of(new ReceiptLineRequest(resourceId,new BigDecimal("10"),new BigDecimal("12"),BigDecimal.ZERO,new BigDecimal("2"),true)),null,"Excedente apto",UUID.randomUUID());
+        receipts.register(donationId,email,request);
+        assertEquals(0,received().compareTo(new BigDecimal("10")));
+        var decision=new DecideSurplusRequest(UUID.randomUUID(),true,"Autorizado");
+        receipts.decide(donationId,request.operacionId().toString(),email,decision);
+        receipts.decide(donationId,request.operacionId().toString(),email,decision);
+        assertEquals(0,received().compareTo(new BigDecimal("12")));
+        assertEquals(0,jdbc.queryForObject("select cantidad_excedente_pendiente from detalle_donacion where id_detalle_donacion=?",BigDecimal.class,lineId).signum());
+    }
+    @Test void zeroAcceptedClosurePersistsWithoutStock() {
+        var request=new RegisterReceiptRequest(List.of(new ReceiptLineRequest(resourceId,BigDecimal.ZERO,new BigDecimal("10"),new BigDecimal("10"),BigDecimal.ZERO,true)),null,"Material no apto",UUID.randomUUID());
+        receipts.register(donationId,email,request);
+        assertEquals(0,received().signum());
+        assertTrue(jdbc.queryForObject("select verificacion_cerrada from detalle_donacion where id_detalle_donacion=?",Boolean.class,lineId));
+        assertNull(jdbc.queryForObject("select fecha_ingreso from donacion where id_donacion=?",java.sql.Timestamp.class,donationId));
+    }
+    @Test void approvalAuditFailureRollsBackInventoryAndDecision() {
+        var request=new RegisterReceiptRequest(List.of(new ReceiptLineRequest(resourceId,new BigDecimal("10"),new BigDecimal("12"),BigDecimal.ZERO,new BigDecimal("2"),true)),null,"Excedente apto",UUID.randomUUID());
+        receipts.register(donationId,email,request);
+        doThrow(new IllegalStateException("Injected failure")).when(audit).saveAndFlush(any(AuditRecord.class));
+        assertThrows(IllegalStateException.class,() -> receipts.decide(donationId,request.operacionId().toString(),email,new DecideSurplusRequest(UUID.randomUUID(),true,"Autorizado")));
+        assertEquals(0,received().compareTo(new BigDecimal("10")));
+        assertNull(jdbc.queryForObject("select decision from recepcion_operacion where id_donacion=?",String.class,donationId));
     }
     String allocate(long need) {
         try { deliveries.save(need, lineId, email, new SaveDeliveryRequest(new BigDecimal("8"), BigDecimal.ZERO)); return "OK"; }

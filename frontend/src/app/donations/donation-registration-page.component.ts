@@ -1,3 +1,4 @@
+import { DistributionCentersComponent } from '../logistics/distribution-centers.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -12,10 +13,10 @@ import { DonationAdminService } from './donation-admin.service';
 import { CatalogPage, CreateDonationRequest } from './donation-admin.model';
 
 type CatalogKind = 'donantes' | 'centros' | 'emergencias';
-type CatalogTab = 'donantes' | 'centros' | 'unidades';
+type CatalogTab = 'donantes' | 'centros' | 'distribucion' | 'unidades';
 @Component({
   selector: 'app-donation-registration-page', standalone: true,
-  imports: [FormsModule, RouterLink, AppShellComponent],
+  imports: [FormsModule, RouterLink, AppShellComponent, DistributionCentersComponent],
   templateUrl: './donation-registration-page.component.html',
   styleUrl: './donation-registration-page.component.css',
 })
@@ -38,7 +39,7 @@ export class DonationRegistrationPageComponent implements OnInit {
   private readonly searches: Partial<Record<CatalogKind, Subscription>> = {};
   activeTab: CatalogTab = 'donantes';
   readonly tabs: ReadonlyArray<{ id: CatalogTab; label: string }> = [
-    { id: 'donantes', label: 'Donantes' }, { id: 'centros', label: 'Centros de acopio' }, { id: 'unidades', label: 'Unidades de medida' },
+    { id: 'donantes', label: 'Donantes' }, { id: 'centros', label: 'Centros de acopio' }, { id: 'distribucion', label: 'Centros de distribución' }, { id: 'unidades', label: 'Unidades de medida' },
   ];
   units: MeasurementUnit[] = [];
   unitSearch = '';
@@ -52,7 +53,7 @@ export class DonationRegistrationPageComponent implements OnInit {
   selectTab(tab: CatalogTab): void {
     if (this.saving) return;
     this.activeTab = tab;
-    if (tab !== 'unidades') this.catalogKind = tab;
+    if (tab === 'donantes' || tab === 'centros') this.catalogKind = tab;
   }
   onTabKey(event: KeyboardEvent): void {
     const index = this.tabs.findIndex(tab => tab.id === this.activeTab);
@@ -185,7 +186,7 @@ export class DonationRegistrationPageComponent implements OnInit {
       detalles: this.lines.map(line => ({ recursoId: line.recursoId!, cantidad: line.cantidad! })) };
     this.saving = true; this.error = null; this.success = null;
     this.api.register(request).pipe(finalize(() => { this.saving = false; this.cd.markForCheck(); }))
-      .subscribe({ next: result => { this.created = result; this.success = `Donación registrada: ${result.codigoTrazabilidad}. Aún no se ha recibido ni entregado.`; },
+      .subscribe({ next: result => { this.created = result; this.success = `Donación registrada: ${result.codigoTrazabilidad}. Presentada físicamente, pendiente de verificación. No genera existencias.`; },
         error: (response: HttpErrorResponse) => {
           this.registrationUnconfirmed = response.status === 0 || response.status >= 500;
           this.error = this.registrationUnconfirmed ? 'El registro no fue confirmado. Verifica el listado con un administrador antes de repetirlo para evitar duplicados.' : this.message(response);

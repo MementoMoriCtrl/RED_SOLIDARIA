@@ -66,3 +66,8 @@ La API se ejecutará en `http://localhost:8080`. Los endpoints, contratos OpenAP
 ## Git
 
 El repositorio se inicializa localmente durante la etapa inicial. No se crean commits ni se configura un remoto automáticamente.
+
+## Modelo logístico
+Consulta [Modelo logístico y trazabilidad](docs/MODELO_LOGISTICO.md) antes de arrancar con Flyway: V3 está preparada, no aplicada. Se distinguen acopio, traslado, recepción en distribución, asignación y entrega final.
+
+La continuación de donaciones presentadas y verificación independiente se documenta en [Modelo B](docs/MODELO_B_VERIFICACION.md). V4 está preparada y no aplicada; requiere revisión antes del arranque contra una base real.

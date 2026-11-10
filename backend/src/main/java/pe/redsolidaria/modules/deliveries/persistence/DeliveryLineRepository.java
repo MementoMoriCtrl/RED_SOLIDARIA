@@ -7,6 +7,10 @@ import org.springframework.data.repository.query.Param;
 import pe.redsolidaria.modules.deliveries.domain.DeliveryLine;
 
 public interface DeliveryLineRepository extends JpaRepository<DeliveryLine, Long> {
+    @Query("select coalesce(sum(l.cantidadAsignada), 0) from DeliveryLine l where l.detalleDonacion.id = :id and l.origenDistribucion = false")
+    BigDecimal historicalAssigned(@Param("id") Long id);
+    @Query("select coalesce(sum(l.cantidadAsignada), 0) from DeliveryLine l where l.detalleDonacion.id = :id and l.origenDistribucion = true")
+    BigDecimal distributionAssigned(@Param("id") Long id);
     @Query("select coalesce(sum(l.cantidadAsignada), 0) from DeliveryLine l where l.detalleDonacion.id = :id")
     BigDecimal assignedToDonation(@Param("id") Long id);
     @Query("select coalesce(sum(l.cantidadAsignada), 0) from DeliveryLine l where l.necesidad.id = :id")

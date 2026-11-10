@@ -59,6 +59,14 @@ class DonationReceiptAuthorizationWebTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test void onlyAdministratorsCanAuthorizeSurplus() throws Exception {
+        String body="{\"operacionId\":\"f9eec73a-d766-4683-9094-e7cb6253aa30\",\"aprobar\":true,\"observaciones\":\"Apto\"}";
+        mvc.perform(post("/api/donaciones/administracion/15/recepciones/receipt/excedente").with(user("operador").authorities(new SimpleGrantedAuthority("DONACION_REGISTRAR")))
+                .contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/donaciones/administracion/15/recepciones/receipt/excedente").with(user("admin").authorities(new SimpleGrantedAuthority("ACCESO_ADMINISTRAR")))
+                .contentType("application/json").content(body)).andExpect(status().isOk());
+        verify((DonationReceiptService)org.springframework.test.util.AopTestUtils.getUltimateTargetObject(service)).decide(org.mockito.ArgumentMatchers.eq(15L),org.mockito.ArgumentMatchers.eq("receipt"),org.mockito.ArgumentMatchers.eq("admin"),org.mockito.ArgumentMatchers.any());
+    }
     @TestConfiguration static class Dependencies {
         @Bean DonationReceiptService receiptService() { return mock(DonationReceiptService.class); }
         @Bean UserRepository userRepository() { return mock(UserRepository.class); }

@@ -36,12 +36,13 @@ public class NeedManagementService {
     private final UserRepository users;
     private final AuditRecordRepository audit;
     private final JsonMapper json;
+    private final pe.redsolidaria.modules.logistics.LogisticsRepository logistics;
 
     public NeedManagementService(NeedRepository needs, AffectedZoneRepository zones, ResourceRepository resources,
             DonationLineRepository donations, DeliveryLineRepository lines, UserRepository users,
-            AuditRecordRepository audit, JsonMapper json) {
+            AuditRecordRepository audit, JsonMapper json, pe.redsolidaria.modules.logistics.LogisticsRepository logistics) {
         this.needs = needs; this.zones = zones; this.resources = resources; this.donations = donations;
-        this.lines = lines; this.users = users; this.audit = audit; this.json = json;
+        this.lines = lines; this.users = users; this.audit = audit; this.json = json; this.logistics = logistics;
     }
 
     public NeedPage list(long emergencyId, long zoneId, int page) {
@@ -82,7 +83,7 @@ public class NeedManagementService {
                     && "ACTIVO".equals(need.getRecurso().getEstado()) && "PENDIENTE".equals(need.getEstado());
             return new DonationSource(line.getId(), line.getDonacion().getCodigoTrazabilidad(), line.getDonacion().getEstado(),
                     line.getCantidadRecibidaAcopio(), assigned,
-                    usable ? line.getCantidadRecibidaAcopio().subtract(assigned).max(BigDecimal.ZERO) : BigDecimal.ZERO,
+                    usable ? logistics.received(line.getId()).subtract(lines.distributionAssigned(line.getId())).max(BigDecimal.ZERO) : BigDecimal.ZERO,
                     lines.assignedToPair(needId, line.getId()), lines.deliveredToPair(needId, line.getId()), usable);
         }).toList(), result.getTotalElements(), result.getTotalPages(), result.getNumber());
     }

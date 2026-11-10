@@ -23,6 +23,7 @@ export interface DonationDetail {
 }
 
 export interface DonationMovement {
+  descripcion?: string;
   estadoAnterior: string | null;
   estadoNuevo: string;
   fechaHora: string;

@@ -50,8 +50,11 @@ class DonationReceiptServiceTest {
     AtomicReference<BigDecimal> accumulated = new AtomicReference<>(new BigDecimal("2.000"));
 
     @BeforeEach void setup() {
+        var registrar=mock(UserAccount.class); when(registrar.getId()).thenReturn(100L);
+        when(donation.getUsuarioRegistro()).thenReturn(registrar); when(responsible.getId()).thenReturn(200L);
         when(donations.findByIdForUpdate(22L)).thenReturn(Optional.of(donation));
         when(donation.getEstado()).thenReturn("REGISTRADA");
+        when(donation.getCentroAcopio()).thenReturn(mock(pe.redsolidaria.modules.resources.domain.CollectionCenter.class));
         when(donation.getDetalles()).thenReturn(List.of(line));
         when(donation.getId()).thenReturn(22L);
         when(line.getRecurso()).thenReturn(resource);
@@ -65,6 +68,20 @@ class DonationReceiptServiceTest {
         when(audits.saveAndFlush(any(AuditRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
+    @Test void rejectsNewReceiptWithoutAnIdentifiedCollectionCenter() {
+        when(donation.getCentroAcopio()).thenReturn(null);
+        var request = new RegisterReceiptRequest(List.of(new ReceiptLineRequest(8L, BigDecimal.ONE)), null, null);
+        assertEquals(400, assertThrows(ResponseStatusException.class,
+            () -> service.register(22L,"admin@example.test",request)).getStatusCode().value());
+        verify(line,never()).recibir(any());
+    }
+    @Test void doesNotRelabelUnlocatedHistoricalStockAsANewCenter() {
+        when(donation.getCentroAcopio()).thenReturn(null);
+        var request = new RegisterReceiptRequest(List.of(new ReceiptLineRequest(8L, BigDecimal.ONE)), null, null, java.util.UUID.randomUUID(), 1L);
+        assertEquals(409, assertThrows(ResponseStatusException.class,
+            () -> service.register(22L,"admin@example.test",request)).getStatusCode().value());
+        verify(line,never()).recibir(any());
+    }
     @Test void recordsPartialReceiptAtomicallyAndLocksBeforeReadingDetails() {
         var request = new RegisterReceiptRequest(
                 List.of(new ReceiptLineRequest(8L, new BigDecimal("3.000"))),

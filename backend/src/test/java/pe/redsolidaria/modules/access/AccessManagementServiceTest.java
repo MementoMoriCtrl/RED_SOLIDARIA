@@ -79,4 +79,16 @@ class AccessManagementServiceTest {
         assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, failure.getStatusCode());
         verify(role, never()).reemplazarPermisos(any());
     }
+    @Test void reservedMasterPermissionCannotBeCreatedOrAssignedToAnyRole() {
+        var service = new AccessManagementService(users, roles, permissions, new BCryptPasswordEncoder(4));
+        assertEquals(403,assertThrows(ResponseStatusException.class,() -> service.createPermission(
+            new pe.redsolidaria.modules.access.api.dto.AccessDtos.CreatePermissionRequest("ADMIN_MAESTRO",null))).getStatusCode().value());
+        var role = new Role("ADMINISTRADOR","Administrador",null);
+        role.asignar(new Permission("ACCESO_ADMINISTRAR",null));
+        when(roles.findById(4L)).thenReturn(java.util.Optional.of(role));
+        when(permissions.findAllById(java.util.Set.of(5L))).thenReturn(java.util.List.of(new Permission("ADMIN_MAESTRO",null)));
+        assertEquals(403,assertThrows(ResponseStatusException.class,() -> service.replaceRolePermissions(4L,
+            new pe.redsolidaria.modules.access.api.dto.AccessDtos.ReplaceRolePermissionsRequest(java.util.Set.of(5L)))).getStatusCode().value());
+        verify(roles,never()).save(any());
+    }
 }

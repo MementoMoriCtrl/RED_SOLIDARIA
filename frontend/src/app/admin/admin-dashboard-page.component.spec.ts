@@ -41,6 +41,22 @@ describe('AdminDashboardPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Pendiente de implementación');
   });
 
+  it.each([false, true])('shows authorized module destinations with registration permission: %s', (canRegister) => {
+    http.expectOne('/api/auth/me').flush({ nombre: 'Ana', apellido: 'Admin', correo: 'admin@example.test',
+      rolCodigo: 'ADMINISTRADOR', rolNombre: 'Administrador',
+      permisos: ['ACCESO_ADMINISTRAR', ...(canRegister ? ['DONACION_REGISTRAR'] : [])] });
+    fixture.detectChanges();
+    const cards = Array.from(fixture.nativeElement.querySelectorAll('.admin-grid a')) as HTMLAnchorElement[];
+    expect(cards.map(card => card.getAttribute('href'))).toEqual([
+      ...(canRegister ? ['/donaciones/registro'] : []), '/admin/catalogos-donaciones',
+      '/admin/donaciones', '/admin/emergencias', '/recursos', '/admin/auditoria', '/trazabilidad',
+    ]);
+    expect(fixture.nativeElement.querySelector('.future-card a')).toBeNull();
+    const menuPaths = Array.from(fixture.nativeElement.querySelectorAll('.side-nav a'))
+      .map(link => (link as HTMLAnchorElement).getAttribute('href'));
+    expect(cards.every(card => menuPaths.includes(card.getAttribute('href')))).toBe(true);
+  });
+
   it('reports server errors and ends loading', () => {
     http.expectOne('/api/auth/me').flush({}, { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();

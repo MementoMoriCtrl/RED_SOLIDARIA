@@ -1,5 +1,7 @@
 # API de usuarios, roles y permisos
 
+Continuación V5 preparada, no aplicada: [administrador maestro](ADMINISTRADOR_MAESTRO.md). La autoridad reservada `ADMIN_MAESTRO` se deriva exclusivamente de una marca de cuenta y no se puede crear ni asignar a roles mediante esta API. El catálogo de permisos de rol no incluye esta autoridad virtual; el perfil autenticado sí la incluye cuando corresponde.
+
 La API usa HTTP Basic sin sesión, valida credenciales contra `usuario` y genera autoridades desde `rol_permiso`/`permiso`. Las contraseñas se codifican con BCrypt (coste 12). Los endpoints administrativos devuelven DTO, nunca `password_hash`.
 
 No existe un endpoint público de bootstrap, cuenta semilla ni contraseña predeterminada. La aplicación normal no ejecuta la herramienta CLI.

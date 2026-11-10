@@ -1,14 +1,14 @@
-<app-shell [breadcrumb]="isCatalogPage ? 'Administración / Catálogos de donaciones' : 'Donaciones / Registro'" [footerText]="isCatalogPage ? 'Catálogos de donaciones' : 'Registro de donaciones'">
+<app-shell [breadcrumb]="isCatalogPage ? 'Administración / Catálogos de donaciones' : 'Donaciones / Registro'" [footerText]="isCatalogPage ? 'Catálogos de donaciones' : 'Registro de donaciones presentadas'">
   <header class="donation-intro">
     <p class="donation-eyebrow">{{ isCatalogPage ? 'ADMINISTRACIÓN' : 'DONACIONES' }}</p>
-    <h1>{{ isCatalogPage ? 'Catálogos de donaciones' : 'Registro de donaciones' }}</h1>
+    <h1>{{ isCatalogPage ? 'Catálogos de donaciones' : 'Registro de donaciones presentadas' }}</h1>
     <p class="donation-description">{{ isCatalogPage ? 'Consulta y administra los datos que acompañan cada donación.' : 'Registra los recursos donados, su donante y el destino de la ayuda.' }}</p>
     <div class="donation-toolbar" role="group" aria-label="Acciones de donaciones">
       @if (!isCatalogPage && canManageCatalogs) {
         <a routerLink="/admin/catalogos-donaciones">Administrar donantes, centros de acopio y unidades de medida <span aria-hidden="true">→</span></a>
       }
       @if (isCatalogPage && canRegister) {
-        <a routerLink="/donaciones/registro"><span aria-hidden="true">←</span> Registrar una donación</a>
+        <a routerLink="/donaciones/registro"><span aria-hidden="true">←</span> Registrar una donación presentada</a>
       }
       <button type="button" [disabled]="loading || saving" (click)="load()">Recargar catálogos</button>
     </div>
@@ -19,8 +19,8 @@
   @else {
     @if (!isCatalogPage && canRegister) {
       <section class="panel donation-panel" aria-labelledby="new-donation-title">
-        <div class="donation-section-heading"><h2 id="new-donation-title">Nueva donación</h2><p>Completa el donante, el destino y los recursos. Los campos con * son obligatorios.</p></div>
-        <p class="donation-notice">Registrar una donación no registra su recepción en acopio ni su entrega a la población.</p>
+        <div class="donation-section-heading"><h2 id="new-donation-title">Nueva donación presentada</h2><p>Completa el donante, el destino y los recursos. Los campos con * son obligatorios.</p></div>
+        <p class="donation-notice">Registrar una donación presentada no registra su recepción en acopio ni su entrega a la población.</p>
         <form #donationForm="ngForm" (ngSubmit)="register()">
           <fieldset class="donation-fields" [disabled]="saving || !!created || registrationUnconfirmed">
             <legend class="donation-sr-only">Datos de la donación</legend>
@@ -56,7 +56,7 @@
                 <div class="donation-resource-row">
                   <label>Recurso {{ index + 1 }} *<select [name]="'resource' + index" [(ngModel)]="line.recursoId" required><option [ngValue]="null">Selecciona recurso</option>
                     @for (item of resources; track item.id) { <option [ngValue]="item.id">{{ item.nombre }} / {{ item.unidadMedida.codigo }}</option> }</select></label>
-                  <label>Cantidad donada *<input [name]="'quantity' + index" type="number" [(ngModel)]="line.cantidad" min="0.001" max="99999999999.999" step="0.001" required /><span class="donation-help">Hasta 3 decimales.</span></label>
+                  <label>Cantidad declarada preliminar *<input [name]="'quantity' + index" type="number" [(ngModel)]="line.cantidad" min="0.001" max="99999999999.999" step="0.001" required /><span class="donation-help">Hasta 3 decimales.</span></label>
                   <button class="donation-remove" type="button" [attr.aria-label]="'Quitar recurso ' + (index + 1)" [disabled]="lines.length === 1" (click)="lines.splice(index, 1)">Quitar recurso</button>
                 </div>
               }
@@ -84,7 +84,9 @@
       </div>
       <p class="donation-help donation-draft-notice">Los datos sin enviar se conservan al cambiar de pestaña mientras permanezcas en esta pantalla.</p>
       <section id="catalog-panel" role="tabpanel" [attr.aria-labelledby]="'tab-' + activeTab" tabindex="0">
-        @if (activeTab !== 'unidades') {
+        @if (activeTab === 'distribucion') {
+          <app-distribution-centers />
+        } @else if (activeTab !== 'unidades') {
           <div class="donation-admin-grid">
             <section class="panel donation-panel" aria-labelledby="catalog-list-title">
               <div class="donation-section-heading"><h2 id="catalog-list-title">{{ activeTab === 'donantes' ? 'Donantes' : 'Centros de acopio' }}</h2><p>Busca por nombre y consulta los registros disponibles.</p></div>

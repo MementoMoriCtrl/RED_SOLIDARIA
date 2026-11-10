@@ -33,7 +33,7 @@
           @for (line of item.detalles; track line.recursoId) {
             <article class="detail-line">
               <div><h3>{{ line.recursoNombre }}</h3><p>{{ line.unidadNombre }}{{ line.unidadSimbolo ? ' · ' + line.unidadSimbolo : '' }}</p></div>
-              <dl><div><dt>Donada</dt><dd>{{ line.cantidadDonada | number:'1.0-3' }}</dd></div><div><dt>Recibida</dt><dd>{{ line.cantidadRecibidaAcopio | number:'1.0-3' }}</dd></div><div><dt>Pendiente</dt><dd>{{ line.cantidadDonada - line.cantidadRecibidaAcopio | number:'1.0-3' }}</dd></div></dl>
+              <dl><div><dt>Declarada preliminar</dt><dd>{{ line.cantidadDonada | number:'1.0-3' }}</dd></div><div><dt>Recibida</dt><dd>{{ line.cantidadRecibidaAcopio | number:'1.0-3' }}</dd></div></dl>
             </article>
           }
         </div>
@@ -41,22 +41,49 @@
       @if (item.observaciones) { <p class="admin-observations"><strong>Observaciones:</strong> {{ item.observaciones }}</p> }
     </section>
 
+    <section class="panel admin-detail-section"><h2>Verificación física independiente</h2>
+      <p>El registro corresponde a bienes presentados. Solo las cantidades aceptadas y los excedentes aprobados generan existencias. Debe verificar una persona distinta del registrador, salvo el administrador maestro autorizado por el servidor.</p>
+      @if (isMasterAdministrator) { <p role="status">Administrador maestro: puedes verificar donaciones propias cuando el servidor lo autorice. Se registra tu identidad real y se mantienen todas las validaciones.</p> }
+      <button type="button" [disabled]="loadingVerification || savingReceipt" (click)="loadVerification()">Consultar avance y autorizaciones</button>
+      @if (receiptError) { <p class="alert" role="alert">{{ receiptError }}</p> }
+      @if (verificationLoaded) {
+        <p>Saldo pendiente de verificación: cantidad que aún puede aceptarse dentro de lo declarado; es cero al cerrar el recurso. No representa material físico sin examinar. La diferencia es aceptada menos declarada y conserva faltantes y excedentes.</p>
+        <p>Examinada y no aceptada se contabilizan desde V4; no reconstruyen verificaciones históricas.</p>
+        <div class="verification-table-wrap"><table><thead><tr><th>Recurso/unidad</th><th>Declarada</th><th>Examinada desde V4</th><th>Aceptada (incluye excedente aprobado)</th><th>No aceptada desde V4</th><th>Excedente pendiente de autorización</th><th>Excedente aprobado</th><th>Saldo pendiente de verificación</th><th>Avance</th><th>Diferencia respecto a lo declarado</th></tr></thead>
+        <tbody>@for (row of verification; track row.recursoId) {
+          <tr><td>{{ row.recursoNombre }} / {{ row.unidad }}</td><td>{{ row.declarada | number:'1.0-3' }}</td><td>{{ row.examinada | number:'1.0-3' }}</td><td>{{ row.aceptada | number:'1.0-3' }}</td><td>{{ row.noAceptada | number:'1.0-3' }}</td><td>{{ row.excedentePendiente | number:'1.0-3' }}</td><td>{{ row.excedenteAprobado | number:'1.0-3' }}</td><td>{{ verificationBalance(row) | number:'1.0-3' }}</td><td>{{ row.avance }}</td>
+          <td>{{ row.diferencia | number:'1.0-3' }} {{ row.cerrada && row.excedentePendiente === 0 ? '(final)' : '(provisional)' }}</td></tr>
+        }</tbody></table></div>
+        @if (!independentVerifier) { <p>No puedes verificar tu propia donación. Otro responsable debe realizar la verificación.</p> }
+      }
+      @if (pendingDecision) { <p>Decisión pendiente de confirmación: {{ pendingDecision.request.operacionId }}</p><button type="button" [disabled]="savingReceipt" (click)="retryDecision()">Reintentar la misma decisión</button> }
+      <a routerLink="/admin/logistica">Consultar traslados y recepción en distribución</a>
+    </section>
     @if (receiptSuccess) { <div class="success-alert" role="status">{{ receiptSuccess }}</div> }
-    @if (canReceive) {
+    @if (canReceive && (verificationLoaded && independentVerifier || pendingReceipt)) {
       <section class="panel admin-detail-section receipt-form" aria-labelledby="receipt-heading">
-        <div class="section-heading"><div><p class="eyebrow">RECEPCIÓN</p><h2 id="receipt-heading">Registrar recepción parcial</h2></div></div>
-        <p class="muted-copy">Indica las cantidades recibidas en esta operación. Puedes registrar varias recepciones hasta completar cada recurso.</p>
-        @if (pendingReceipt) { <p role="status">Hay una recepción pendiente de confirmación. El reintento enviará exactamente los mismos datos e identificador.</p> }
+        <div class="section-heading"><div><p class="eyebrow">RECEPCIÓN</p><h2 id="receipt-heading">Confirmar verificación física</h2></div></div>
+        <p class="muted-copy">Indica únicamente las cantidades examinadas en esta operación, sin volver a contar las anteriores. Examinada = aceptada + no aceptada + excedente pendiente.</p>
+        @if (pendingReceipt) { <p role="status">Hay una recepción pendiente de confirmación. El reintento enviará exactamente los mismos datos e identificador.</p>
+          <ul>@for (line of pendingReceipt.detalles; track line.recursoId) { <li>Recurso {{ line.recursoId }}: examinada {{ line.examinada }}, aceptada {{ line.cantidad }}, no aceptada {{ line.noAceptada }}, excedente {{ line.excedente }}, cerrar {{ line.cerrar }}</li> }</ul> }
         @if (receiptError) { <div class="alert" role="alert">{{ receiptError }}</div> }
         <div class="receipt-lines">
-          @for (line of item.detalles; track line.recursoId) {
-            @if (line.cantidadDonada > line.cantidadRecibidaAcopio) {
-              <label>{{ line.recursoNombre }} · pendiente {{ line.cantidadDonada - line.cantidadRecibidaAcopio | number:'1.0-3' }} {{ line.unidadSimbolo || line.unidadCodigo }}
-                <input type="number" min="0.001" step="0.001" [disabled]="savingReceipt || !!pendingReceipt" [value]="receiptAmounts[line.recursoId] || ''" [max]="line.cantidadDonada - line.cantidadRecibidaAcopio" (input)="setReceiptAmount(line.recursoId, $any($event.target).value)" [attr.aria-label]="'Cantidad recibida de ' + line.recursoNombre">
-              </label>
-            }
-          }
+          @for (row of verification; track row.recursoId) { @if (!row.cerrada) {
+            <fieldset [disabled]="savingReceipt || !!pendingReceipt"><legend>{{ row.recursoNombre }} / {{ row.unidad }}</legend>
+              <label>Examinada<input type="number" min="0" step="0.001" [value]="examinedAmounts[row.recursoId] || ''" (input)="examinedAmounts[row.recursoId] = $any($event.target).value"></label>
+              <label>Aceptada dentro de lo declarado<input type="number" min="0" step="0.001" [value]="receiptAmounts[row.recursoId] || ''" (input)="setReceiptAmount(row.recursoId, $any($event.target).value)"></label>
+              <label>No aceptada<input type="number" min="0" step="0.001" [value]="rejectedAmounts[row.recursoId] || ''" (input)="rejectedAmounts[row.recursoId] = $any($event.target).value"></label>
+              <label>Excedente apto pendiente de autorización<input type="number" min="0" step="0.001" [value]="surplusAmounts[row.recursoId] || ''" (input)="surplusAmounts[row.recursoId] = $any($event.target).value"></label>
+              <label><input type="checkbox" [checked]="closing[row.recursoId] || false" (change)="closing[row.recursoId] = $any($event.target).checked">Cerrar verificación de este recurso (puede aceptarse cero)</label>
+            </fieldset>
+          } }
         </div>
+        @if (!item.centroAcopio) {
+          <label>ID del centro de acopio de recepción<input type="number" min="1" [disabled]="savingReceipt || !!pendingReceipt" [value]="receiptCenterId || ''" (input)="receiptCenterId = +$any($event.target).value"></label>
+          <p>Consulta el identificador en <a routerLink="/admin/catalogos-donaciones">Centros de acopio</a>. Si existen recepciones antiguas sin centro, se requiere conciliarlas antes de continuar.</p>
+        }
+        <a routerLink="/admin/logistica">Consultar traslados y recepción en distribución</a>
+        <p>Justifica siempre material no aceptado, excedentes y cierres con diferencia.</p>
         <div class="receipt-meta">
           <label>Ubicación<input type="text" maxlength="200" [disabled]="savingReceipt || !!pendingReceipt" [value]="receiptLocation" (input)="receiptLocation = $any($event.target).value"></label>
           <label>Observaciones<textarea rows="3" [disabled]="savingReceipt || !!pendingReceipt" [value]="receiptObservations" (input)="receiptObservations = $any($event.target).value"></textarea></label>
@@ -65,6 +92,24 @@
       </section>
     }
 
+    <section class="panel admin-detail-section"><h2>Historial de recepciones en acopio</h2>
+      <p>Consulta las operaciones guardadas desde V2. Los movimientos anteriores permanecen en el historial general.</p>
+      <button type="button" [disabled]="loadingHistory" (click)="loadReceiptHistory()">Consultar recepciones</button>
+      <ul>@for (entry of receipts; track entry.operacionId) { <li><strong>{{ entry.recepcion.fechaHora | date:'dd/MM/yyyy HH:mm' }}</strong> · {{ entry.operacionId }} · {{ entry.recepcion.ubicacion }}
+        <ul>@for (line of entry.recepcion.detalles; track line.recursoNombre) { <li>{{ line.recursoNombre }}: aceptada {{ line.cantidadRecibidaOperacion | number:'1.0-3' }} · examinada {{ line.examinada }} · no aceptada {{ line.noAceptada }} · excedente {{ line.excedente }} · {{ line.cerrada == null ? 'Histórico sin cierre por recurso' : line.cerrada ? 'Cerrada' : 'Parcial' }}</li> }</ul>
+        <p>Verificador ID {{ entry.recepcion.responsableId || 'Histórico: ver movimientos' }} · Registrador ID {{ entry.recepcion.registradorId ?? 'Histórico: no disponible en esta respuesta' }} · Centro {{ entry.recepcion.centroAcopioId }}</p>
+        @if (entry.recepcion.autoverificacionMaestro) { <p>Verificación propia realizada por el administrador maestro.</p> }
+        {{ entry.recepcion.observaciones }}
+        @if (entry.decision) { <p>{{ entry.decision }} · responsable {{ entry.decisorId }} · {{ entry.fechaDecision | date:'dd/MM/yyyy HH:mm' }} · {{ entry.observacionesDecision }}</p> }
+        @if (hasSurplus(entry)) {
+          <label>Justificación de autorización<input maxlength="2000" [disabled]="savingReceipt || !!pendingDecision" [value]="decisionNotes[entry.operacionId] || ''" (input)="decisionNotes[entry.operacionId] = $any($event.target).value"></label>
+          <button type="button" [disabled]="savingReceipt || !!pendingDecision" (click)="decide(entry,true)">Aprobar excedente</button>
+          <button type="button" [disabled]="savingReceipt || !!pendingDecision" (click)="decide(entry,false)">Rechazar excedente</button>
+        }
+      </li> }</ul>
+      <button type="button" [disabled]="receiptPage === 0 || loadingHistory" (click)="loadReceiptHistory(receiptPage - 1)">Anterior</button>
+      <button type="button" [disabled]="receipts.length < 20 || loadingHistory" (click)="loadReceiptHistory(receiptPage + 1)">Siguiente</button>
+    </section>
     <section class="panel admin-detail-section">
       <div class="section-heading"><div><p class="eyebrow">HISTORIAL</p><h2>Movimientos</h2></div></div>
       @if (item.movimientos.length === 0) { <p class="muted-copy">No hay movimientos registrados.</p> }

@@ -13,10 +13,12 @@ public class DeliveryLine {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "id_necesidad", nullable = false) private Need necesidad;
     @Column(name = "cantidad_asignada", nullable = false, precision = 14, scale = 3) private BigDecimal cantidadAsignada;
     @Column(name = "cantidad_entregada", nullable = false, precision = 14, scale = 3) private BigDecimal cantidadEntregada;
+    @Column(name = "origen_distribucion", nullable = false) private boolean origenDistribucion;
     protected DeliveryLine() {}
     public DeliveryLine(Delivery entrega, DonationLine donacion, Need necesidad,
             BigDecimal asignada, BigDecimal entregada) {
         this.entrega = entrega; this.detalleDonacion = donacion; this.necesidad = necesidad;
+        this.origenDistribucion = true;
         this.cantidadAsignada = asignada; this.cantidadEntregada = entregada;
     }
     public BigDecimal getCantidadAsignada() { return cantidadAsignada; }

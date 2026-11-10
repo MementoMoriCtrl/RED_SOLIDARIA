@@ -1,5 +1,7 @@
 package pe.redsolidaria.modules.donations;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -113,7 +115,10 @@ class DonationQueryServiceTest {
         assertEquals("Ana PÃ©rez", response.movimientos().getFirst().responsableNombre());
         verify(movements).findAllByDonacion_IdOrderByFechaHoraAscIdAsc(31L);
 
+        when(movement.getTipoEvento()).thenReturn("RECEPCION_DONACION");
         var publicResponse = service.findPublicByTrackingCode("RS-TRACE-1");
+        assertEquals("Verificación física confirmada",publicResponse.movimientos().getFirst().descripcion());
+        assertNull(publicResponse.movimientos().getFirst().ubicacion());
         assertEquals("RS-TRACE-1", publicResponse.codigoTrazabilidad());
         assertEquals("Centro principal", publicResponse.centroAcopio().nombre());
         assertEquals("Agua", publicResponse.detalles().getFirst().recursoNombre());

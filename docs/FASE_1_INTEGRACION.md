@@ -197,3 +197,6 @@ Frontend creado: `donations/donation-registration-page.component.ts`, `.html`, `
 - Recursos conserva la posibilidad previa de cambiar su unidad: sigue pendiente acordar bloqueo o unidad histórica. Esta intervención solo permite crear unidades nuevas, sin convertir ni reescribir cantidades históricas.
 - Reasignaciones desde centros, reversos y reglas de edición/cancelación o cierre de necesidades siguen pendientes de definición funcional. No se implementaron esas operaciones ni se modificaron estados generales automáticamente.
 - No se hicieron commits, push, restauraciones, cambios de datos reales ni ejecución de migraciones. Permanecen las dos eliminaciones de `.gitkeep` y todo el trabajo previo. La fase 1 sigue abierta; no se avanzó a otras fases.
+
+## Adaptación logística del 09/11/2026
+La disponibilidad basada directamente en acopio descrita en esta fase queda sustituida para nuevas reservas por recepción confirmada en distribución. Ver MODELO_LOGISTICO.md para auditoría, V3 pendiente de aplicar, compatibilidad histórica, endpoints y resultados actuales. Los resultados anteriores son históricos y no certifican MySQL desplegado.

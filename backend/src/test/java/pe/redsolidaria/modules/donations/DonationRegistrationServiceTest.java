@@ -74,7 +74,9 @@ class DonationRegistrationServiceTest {
         when(donor.getId()).thenReturn(11L);
         when(donor.getNombre()).thenReturn("Donante de prueba");
         when(center.getId()).thenReturn(3L);
-        when(donations.saveAndFlush(any(Donation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(donations.saveAndFlush(any(Donation.class))).thenAnswer(invocation -> {
+            Donation saved=invocation.getArgument(0); org.springframework.test.util.ReflectionTestUtils.setField(saved,"id",42L); return saved;
+        });
         when(lines.saveAllAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(codes.nextCode()).thenReturn("RS-UNICO");
     }
@@ -87,6 +89,11 @@ class DonationRegistrationServiceTest {
         assertEquals(DonationRegistrationService.INITIAL_STATE, response.estado());
         assertEquals(11L, response.donanteId());
         assertEquals(1, response.detalles().size());
+        assertNull(response.fechaIngreso());
+        verify(lines).saveAllAndFlush(argThat(items -> {
+            for (var item : items) if (item.getCantidadRecibidaAcopio().signum()!=0) return false;
+            return true;
+        }));
         verify(donations).saveAndFlush(argThat(d -> d.getUsuarioRegistro() == user
                 && "RS-UNICO".equals(d.getCodigoTrazabilidad())
                 && "REGISTRADA".equals(d.getEstado())));

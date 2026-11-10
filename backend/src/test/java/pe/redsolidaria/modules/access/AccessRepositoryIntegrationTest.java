@@ -20,12 +20,11 @@ import pe.redsolidaria.modules.access.domain.UserAccount;
 import pe.redsolidaria.modules.access.persistence.PermissionRepository;
 import pe.redsolidaria.modules.access.persistence.RoleRepository;
 import pe.redsolidaria.modules.access.persistence.UserRepository;
-import pe.redsolidaria.test.RequiresLocalRedSolidariaMySql;
+import pe.redsolidaria.test.StrictTestMySqlSupport;
 
 @SpringBootTest
 @Transactional
-@RequiresLocalRedSolidariaMySql
-class AccessRepositoryIntegrationTest {
+class AccessRepositoryIntegrationTest extends StrictTestMySqlSupport {
     @Autowired UserRepository users;
     @Autowired RoleRepository roles;
     @Autowired PermissionRepository permissions;

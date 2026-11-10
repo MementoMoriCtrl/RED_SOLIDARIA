@@ -108,13 +108,27 @@ public class DonationQueryService {
         List<PublicDonationMovementSummary> history = movements
                 .findAllByDonacion_IdOrderByFechaHoraAscIdAsc(donation.getId()).stream()
                 .map(movement -> new PublicDonationMovementSummary(movement.getEstadoAnterior(),
-                        movement.getEstadoNuevo(), movement.getFechaHora(), movement.getUbicacion()))
+                        movement.getEstadoNuevo(), movement.getFechaHora(), null, publicDescription(movement.getTipoEvento())))
                 .toList();
 
         return new PublicDonationTraceResponse(donation.getCodigoTrazabilidad(), donation.getFechaRegistro(),
                 donation.getFechaIngreso(), donation.getEstado(), center, details, history);
     }
 
+    private static String publicDescription(String type) {
+        if (type==null) return "Movimiento registrado";
+        return switch(type) {
+            case "DONACION_PRESENTADA" -> "Donación presentada, pendiente de verificación";
+            case "RECEPCION_DONACION" -> "Verificación física confirmada";
+            case "SALIDA_TRASLADO" -> "Traslado al centro de distribución";
+            case "RECEPCION_DISTRIBUCION" -> "Recepción en distribución";
+            case "ASIGNACION_RECURSOS" -> "Asignación de recursos";
+            case "ENTREGA_POBLACION" -> "Entrega a la población";
+            case "AUTORIZACION_EXCEDENTE" -> "Recepción adicional autorizada";
+            case "RECHAZO_EXCEDENTE" -> "Verificación adicional resuelta";
+            default -> "Movimiento registrado";
+        };
+    }
     private static DonationDetailSummary toDetailSummary(DonationLine line) {
         var resource = line.getRecurso();
         var unit = resource.getUnidadMedida();

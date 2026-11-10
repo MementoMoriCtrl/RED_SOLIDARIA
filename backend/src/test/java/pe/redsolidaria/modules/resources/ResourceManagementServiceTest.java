@@ -66,6 +66,16 @@ class ResourceManagementServiceTest {
     }
 
     @Test
+    void refusesUnitChangesWhenQuantitiesAlreadyHaveHistory() {
+        when(unit.getId()).thenReturn(7L);
+        Resource resource = new Resource(unit, "Arroz", "Alimentos", null, "ACTIVO");
+        when(resources.findById(12L)).thenReturn(Optional.of(resource));
+        when(resources.historyCount(12L)).thenReturn(1L);
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.update(12L,
+            new SaveResourceRequest("Arroz", "Alimentos", null, 8L))).getStatusCode().value());
+        verify(resources, never()).save(any());
+    }
+    @Test
     void returnsNotFoundWhenTheMeasurementUnitDoesNotExist() {
         when(units.findById(404L)).thenReturn(Optional.empty());
         ResponseStatusException error = assertThrows(ResponseStatusException.class,

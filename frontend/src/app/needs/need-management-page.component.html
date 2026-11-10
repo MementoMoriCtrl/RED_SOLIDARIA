@@ -39,10 +39,10 @@
   @if (loadingSources) { <p role="status">Cargando donaciones compatibles…</p> }
   @if (selected && !loading && !loadingSources) {
     <section class="panel"><h2>Donaciones para {{ selected.recursoNombre }} ({{ selected.unidad }})</h2>
-      <p>Solo donaciones de la misma emergencia y recurso. Disponible = recibido en acopio − asignado a todas las necesidades.
+      <p>Solo donaciones de la misma emergencia y recurso. Disponible = recepción confirmada en distribución − reservas nuevas. Las reservas históricas permanecen separadas.
         Este saldo es compartido; no se suma otra vez por cada necesidad. Estados en tránsito, devuelta, incidencia o entregada no admiten nuevas operaciones.</p>
       @if (sources.content.length === 0 && !error) { <p role="status">No hay donaciones con recepción o asignación registrada para este recurso y emergencia.</p> }
-      <div class="table-wrap"><table><thead><tr><th>Donación / estado</th><th>Recibido en acopio</th><th>Asignado total de donación</th><th>Disponible</th><th>Asignado a esta necesidad</th><th>Entregado a esta necesidad</th><th></th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th>Donación / estado</th><th>Recibido en acopio</th><th>Asignado total de donación</th><th>Disponible en distribución</th><th>Asignado a esta necesidad</th><th>Entregado a esta necesidad</th><th></th></tr></thead>
         <tbody>@for (item of sources.content; track item.detalleDonacionId) {
           <tr><td>{{ item.codigoTrazabilidad }} / {{ item.estado }}</td><td>{{ item.recibidaAcopio | number:'1.0-3' }}</td>
             <td>{{ item.asignadaDonacion | number:'1.0-3' }}</td><td>{{ item.disponible | number:'1.0-3' }}</td>

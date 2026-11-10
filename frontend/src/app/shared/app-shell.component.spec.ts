@@ -43,6 +43,20 @@ describe('AppShellComponent', () => {
     expect(active.getAttribute('aria-current')).toBe('page');
   });
 
+  it('keeps the requested module order for users with both permissions', () => {
+    auth.provideCredentials('admin@test', 'test-password');
+    auth.markAuthenticated({ nombre: 'Admin', apellido: 'Test', correo: 'admin@test',
+      rolCodigo: 'TEST', rolNombre: 'Test', permisos: ['ACCESO_ADMINISTRAR', 'DONACION_REGISTRAR'] });
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+    const links = Array.from(fixture.nativeElement.querySelectorAll('.side-nav a')) as HTMLAnchorElement[];
+    expect(links.map(link => link.getAttribute('href'))).toEqual([
+      '/admin', '/donaciones/registro', '/admin/catalogos-donaciones', '/admin/donaciones',
+      '/admin/logistica', '/admin/emergencias', '/recursos', '/admin/auditoria', '/trazabilidad',
+    ]);
+    expect(fixture.nativeElement.querySelector('.sidebar-footer .sidebar-session-button')).toBeTruthy();
+  });
+
   it('does not show administrative navigation to an authenticated non-admin', () => {
     auth.provideCredentials('org@example.test', 'test-password');
     auth.markAuthenticated({ nombre: 'Org', apellido: 'User', correo: 'org@example.test',

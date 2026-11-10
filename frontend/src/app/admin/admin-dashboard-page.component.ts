@@ -19,6 +19,8 @@ export class AdminDashboardPageComponent implements OnInit {
   private readonly changeDetector = inject(ChangeDetectorRef);
 
   readonly profile = this.auth.profile;
+  get canRegisterDonation(): boolean { return this.auth.hasPermission('DONACION_REGISTRAR'); }
+
   loading = true;
   error: string | null = null;
 

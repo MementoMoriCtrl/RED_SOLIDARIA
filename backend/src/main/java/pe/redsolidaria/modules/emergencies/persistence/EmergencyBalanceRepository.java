@@ -18,13 +18,22 @@ public class EmergencyBalanceRepository {
                     FROM necesidad n JOIN zona_afectada z ON z.id_zona_afectada = n.id_zona_afectada
                     WHERE z.id_emergencia = :id GROUP BY n.id_recurso
                 ), reservations AS (
-                    SELECT id_detalle_donacion, SUM(cantidad_asignada) asignada
+                    SELECT id_detalle_donacion, SUM(CASE WHEN origen_distribucion=1 THEN cantidad_asignada ELSE 0 END) asignada
                     FROM detalle_entrega GROUP BY id_detalle_donacion
+                ), transfers AS (
+                    SELECT id_detalle_donacion,SUM(cantidad_enviada) trasladada,
+                        COALESCE(SUM(cantidad_recibida),0) recibidaDistribucion,
+                        SUM(CASE WHEN estado='EN_TRANSITO' THEN cantidad_enviada ELSE 0 END) enTransito,
+                        SUM(CASE WHEN estado<>'EN_TRANSITO' THEN cantidad_enviada-cantidad_recibida ELSE 0 END) diferencia
+                    FROM traslado_recurso GROUP BY id_detalle_donacion
                 ), receipts AS (
                     SELECT l.id_recurso, SUM(l.cantidad_recibida_acopio) recibida,
+                        SUM(COALESCE(t.trasladada,0)) trasladada, SUM(COALESCE(t.recibidaDistribucion,0)) recibidaDistribucion,
+                        SUM(COALESCE(t.enTransito,0)) enTransito,SUM(COALESCE(t.diferencia,0)) diferencia,
                         SUM(CASE WHEN d.estado IN ('REGISTRADA','RECIBIDA','ALMACENADA','CLASIFICADA')
-                            THEN GREATEST(0, l.cantidad_recibida_acopio - COALESCE(a.asignada,0)) ELSE 0 END) disponible
+                            THEN GREATEST(0, COALESCE(t.recibidaDistribucion,0) - COALESCE(a.asignada,0)) ELSE 0 END) disponible
                     FROM detalle_donacion l JOIN donacion d ON d.id_donacion = l.id_donacion
+                    LEFT JOIN transfers t ON t.id_detalle_donacion = l.id_detalle_donacion
                     LEFT JOIN reservations a ON a.id_detalle_donacion = l.id_detalle_donacion
                     WHERE d.id_emergencia = :id GROUP BY l.id_recurso
                 ), events AS (
@@ -34,7 +43,9 @@ public class EmergencyBalanceRepository {
                     WHERE z.id_emergencia = :id GROUP BY n.id_recurso
                 )
                 SELECT r.id_recurso, r.nombre, u.codigo, COALESCE(n.requerida,0) requerida,
-                    COALESCE(d.recibida,0) recibida, COALESCE(e.asignada,0) asignada, COALESCE(e.entregada,0) entregada,
+                    COALESCE(d.recibida,0) recibida, COALESCE(d.trasladada,0) trasladada,
+                    COALESCE(d.recibidaDistribucion,0) recibidaDistribucion,COALESCE(d.enTransito,0) enTransito,
+                    COALESCE(d.diferencia,0) diferencia, COALESCE(e.asignada,0) asignada, COALESCE(e.entregada,0) entregada,
                     CASE WHEN r.estado = 'ACTIVO' THEN COALESCE(d.disponible,0) ELSE 0 END disponible
                 FROM recurso r JOIN unidad_medida u ON u.id_unidad_medida = r.id_unidad_medida
                 LEFT JOIN requirements n ON n.id_recurso = r.id_recurso
@@ -50,7 +61,8 @@ public class EmergencyBalanceRepository {
                     var pending = required.subtract(assigned).max(BigDecimal.ZERO);
                     return new ResourceBalance(rs.getLong("id_recurso"), rs.getString("nombre"), rs.getString("codigo"),
                             required, rs.getBigDecimal("recibida"), assigned, delivered, available, pending,
-                            required.subtract(delivered).max(BigDecimal.ZERO), pending.subtract(available).max(BigDecimal.ZERO));
+                            required.subtract(delivered).max(BigDecimal.ZERO), pending.subtract(available).max(BigDecimal.ZERO),rs.getBigDecimal("trasladada"),
+                            rs.getBigDecimal("recibidaDistribucion"),rs.getBigDecimal("enTransito"),rs.getBigDecimal("diferencia"));
                 }).list();
     }
 }

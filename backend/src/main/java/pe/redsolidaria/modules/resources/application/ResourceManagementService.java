@@ -49,6 +49,8 @@ public class ResourceManagementService {
     public ResourceResponse update(long id, SaveResourceRequest request) {
         validateDescription(request.descripcion());
         Resource resource = resource(id);
+        if (!java.util.Objects.equals(resource.getUnidadMedida().getId(), request.unidadMedidaId()) && resources.historyCount(id) > 0)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La unidad de un recurso con donaciones o necesidades no puede cambiar; registra otro recurso");
         resource.actualizar(unit(request.unidadMedidaId()), clean(request.nombre()), clean(request.categoria()),
                 clean(request.descripcion()));
         return resourceResponse(resources.save(resource));

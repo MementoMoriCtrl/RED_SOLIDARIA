@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 import { administratorGuard, authenticatedGuard, donationRegistrationGuard } from './auth/auth.guards';
 
 export const routes: Routes = [
+  { path: 'admin/logistica', canActivate: [administratorGuard],
+    loadComponent: () => import('./logistics/logistics-page.component').then(module => module.LogisticsPageComponent) },
   {
     path: 'donaciones/registro', canActivate: [donationRegistrationGuard],
     data: { donationPage: 'registration' },

@@ -106,7 +106,10 @@ public class DonationRegistrationService {
         }
         savedLines = lines.saveAllAndFlush(savedLines);
         movements.saveAndFlush(new DonationMovement(donation, responsible, null, INITIAL_STATE,
-                clean(request.ubicacion()), clean(request.observaciones())));
+                clean(request.ubicacion()), clean(request.observaciones())).conTipo("DONACION_PRESENTADA"));
+        entityManager.persist(new pe.redsolidaria.modules.audit.domain.AuditRecord(responsible,"DONACION",donation.getId().toString(),
+            "REGISTRO_DONACION",null,tools.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(
+                Map.of("codigo",trackingCode,"detallesDeclarados",request.detalles()))));
 
         entityManager.refresh(donation);
         return toResponse(donation, savedLines);

@@ -24,6 +24,21 @@ public class UserAccount {
     public UserAccount(Role rol, String nombre, String apellido, String correo, String passwordHash, String estado) {
         this.rol = rol; this.nombre = nombre; this.apellido = apellido; this.correo = correo; this.passwordHash = passwordHash; this.estado = estado;
     }
+    // Nullable singleton: only the controlled migration can grant this account capability.
+    @Column(name = "admin_maestro", insertable = false, updatable = false)
+    private Boolean adminMaestro;
+    public static final String MASTER_PERMISSION = "ADMIN_MAESTRO";
+    public java.util.Set<String> permisosEfectivos() {
+        var codes = rol.getAsignaciones().stream().map(a -> a.getPermiso().getCodigo())
+                .filter(code -> !MASTER_PERMISSION.equals(code))
+                .collect(java.util.stream.Collectors.toCollection(java.util.HashSet::new));
+        if (esAdministradorMaestro()) codes.add(MASTER_PERMISSION);
+        return java.util.Set.copyOf(codes);
+    }
+    public boolean esAdministradorMaestro() {
+        return Boolean.TRUE.equals(adminMaestro) && "ACTIVO".equalsIgnoreCase(estado)
+                && rol.getAsignaciones().stream().anyMatch(a -> "ACCESO_ADMINISTRAR".equals(a.getPermiso().getCodigo()));
+    }
     public void cambiarEstado(String estado) { this.estado = estado; }
     public void cambiarRol(Role rol) { this.rol = rol; }
     public Long getId() { return id; }

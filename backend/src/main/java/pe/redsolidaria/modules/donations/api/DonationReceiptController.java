@@ -15,6 +15,17 @@ import pe.redsolidaria.modules.donations.application.DonationReceiptService;
 public class DonationReceiptController {
     private final DonationReceiptService service;
     public DonationReceiptController(DonationReceiptService service) { this.service = service; }
+    @org.springframework.web.bind.annotation.GetMapping("/{id}/recepciones")
+    public java.util.List<java.util.Map<String,Object>> history(@PathVariable Long id,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="0") @jakarta.validation.constraints.Min(0) int page) {
+        return service.history(id,page);
+    }
+    @org.springframework.web.bind.annotation.GetMapping("/{id}/verificacion")
+    public java.util.List<VerificationProgress> progress(@PathVariable long id,Authentication actor) { return service.progress(id,actor.getName()); }
+    @PostMapping("/{id}/recepciones/{uuid}/excedente")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ACCESO_ADMINISTRAR')")
+    public RegisterReceiptResponse decide(@PathVariable long id,@PathVariable String uuid,
+            @Valid @RequestBody DecideSurplusRequest request,Authentication actor) { return service.decide(id,uuid,actor.getName(),request); }
     @PostMapping("/{id}/recepciones")
     public RegisterReceiptResponse receive(@PathVariable Long id, @Valid @RequestBody RegisterReceiptRequest request,
             Authentication authentication) {

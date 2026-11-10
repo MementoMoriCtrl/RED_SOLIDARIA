@@ -35,7 +35,8 @@ class NeedManagementServiceTest {
     DeliveryLineRepository lines = mock(DeliveryLineRepository.class);
     UserRepository users = mock(UserRepository.class);
     AuditRecordRepository audit = mock(AuditRecordRepository.class);
-    NeedManagementService service = new NeedManagementService(needs, zones, resources, donations, lines, users, audit, JsonMapper.builder().build());
+    pe.redsolidaria.modules.logistics.LogisticsRepository logistics = mock(pe.redsolidaria.modules.logistics.LogisticsRepository.class);
+    NeedManagementService service = new NeedManagementService(needs, zones, resources, donations, lines, users, audit, JsonMapper.builder().build(), logistics);
 
     @Test void registersNeedWithAuditAndKeepsReceivedSeparateFromDelivered() {
         var zone = mock(AffectedZone.class);
@@ -56,8 +57,8 @@ class NeedManagementServiceTest {
         });
         when(lines.assignedToNeed(4L)).thenReturn(BigDecimal.ZERO);
         when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.ZERO);
-        var response = service.create(1, 2, "ADMIN", new CreateNeedRequest(3L, new BigDecimal("12.500"), "ALTA", null));
-        assertEquals(new BigDecimal("12.500"), response.pendienteEntregar());
+        var response = service.create(1, 2, "ADMIN", new CreateNeedRequest(3L, new BigDecimal("100.000"), "ALTA", null));
+        assertEquals(new BigDecimal("100.000"), response.pendienteEntregar());
         assertEquals(BigDecimal.ZERO, response.entregada());
         var record = ArgumentCaptor.forClass(AuditRecord.class);
         verify(audit).saveAndFlush(record.capture());
@@ -84,6 +85,8 @@ class NeedManagementServiceTest {
         when(source.getId()).thenReturn(5L);
         when(source.getDonacion()).thenReturn(donation);
         when(source.getCantidadRecibidaAcopio()).thenReturn(new BigDecimal("7"));
+        when(logistics.received(5L)).thenReturn(new BigDecimal("7"));
+        when(lines.distributionAssigned(5L)).thenReturn(new BigDecimal("5"));
         when(donation.getEstado()).thenReturn("REGISTRADA");
         when(lines.assignedToDonation(5L)).thenReturn(new BigDecimal("5"));
         when(lines.assignedToPair(4L, 5L)).thenReturn(new BigDecimal("3"));

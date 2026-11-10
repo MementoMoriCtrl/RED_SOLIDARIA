@@ -1,3 +1,4 @@
+import { VerificationProgress, ReceiptHistoryEntry } from './donation-admin.model';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -20,6 +21,13 @@ export class DonationAdminService {
     return this.http.get<AdministrativeDonationDetail>(`${this.endpoint}/${id}`);
   }
 
+  receiptHistory(id: number, page = 0) {
+    return this.http.get<ReceiptHistoryEntry[]>(`${this.endpoint}/${id}/recepciones`, { params: { page } });
+  }
+  verification(id: number) { return this.http.get<VerificationProgress[]>(`${this.endpoint}/${id}/verificacion`); }
+  decideSurplus(id: number, uuid: string, request: { operacionId: string; aprobar: boolean; observaciones: string }) {
+    return this.http.post(`${this.endpoint}/${id}/recepciones/${uuid}/excedente`, request);
+  }
   registerReceipt(id: number, request: RegisterDonationReceiptRequest): Observable<unknown> {
     return this.http.post(`${this.endpoint}/${id}/recepciones`, request);
   }
