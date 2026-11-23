@@ -10,6 +10,13 @@ export interface AdministrativeDonationListItem {
 }
 
 export interface AdministrativeDonationDetail {
+  trazabilidadAdministrativa?: {
+    lugarPresentacion: string | null;
+    situacion: import('./donation-custody.model').PublicCustody;
+    saldosBrutos?: Array<{ recurso: string; unidad: string; tipo: string; centro: string | null; saldoBruto: number }>;
+    operaciones: Array<{ recurso: string; unidad: string; movimiento: import('./donation-custody.model').CustodyEvent;
+      operacion: string; responsableId: number | null; responsableNombre: string | null; observaciones: string | null }>;
+  };
   id: number;
   codigoTrazabilidad: string;
   fechaRegistro: string;
@@ -48,6 +55,8 @@ export interface RegisterDonationReceiptRequest {
 }
 
 export interface AdministrativeDonationFilters {
+  fechaDesde?: string;
+  fechaHasta?: string;
   codigo?: string;
   estado?: string;
 }
@@ -57,6 +66,7 @@ export interface CreateDonationRequest {
   ubicacion: string; observaciones: string; detalles: Array<{ recursoId: number; cantidad: number; examinada?: number; noAceptada?: number; excedente?: number; cerrar?: boolean }>;
 }
 export interface CatalogItem { id: number; nombre: string; ubicacion: string | null; }
+export interface CatalogDetail extends CatalogItem { descripcion: string | null; }
 export interface CatalogPage { content: CatalogItem[]; page: number; totalPages: number; }
 
 export interface VerificationProgress {

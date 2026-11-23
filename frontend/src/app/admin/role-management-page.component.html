@@ -1,0 +1,74 @@
+<app-shell breadcrumb="Administración / Roles y permisos" footerText="Gestión de acceso">
+  <section class="intro" aria-labelledby="page-title"><p class="eyebrow">ADMINISTRACIÓN · ACCESO</p>
+    <h1 id="page-title">Roles y permisos</h1><p class="intro-copy">Administra los roles y consulta las capacidades disponibles para las cuentas.</p></section>
+  @if (success) { <div class="notice" role="status">{{ success }}</div> }
+  @if (error) { <div class="alert" role="alert">{{ error }} <button type="button" class="link-button" (click)="load()" [disabled]="saving">Actualizar lista</button></div> }
+
+  <section class="panel toolbar" aria-label="Buscar roles"><label class="search">Buscar rol<input type="search" [(ngModel)]="search" placeholder="Nombre o código" autocomplete="off"></label>
+    <button class="primary-button" type="button" (click)="createRole()" [disabled]="loading || saving">Crear rol</button></section>
+
+  @if (mode) {
+    <section class="panel form-panel" aria-labelledby="role-form-title"><div class="section-heading"><div><p class="eyebrow">ROL</p><h2 id="role-form-title">{{ mode === 'create' ? 'Crear rol' : 'Editar rol' }}</h2></div></div>
+      <form class="user-form" [formGroup]="roleForm" (ngSubmit)="saveRole()" novalidate>
+        <label>Código<input formControlName="codigo" maxlength="50" [readOnly]="mode === 'edit'" required></label>
+        <label>Nombre<input formControlName="nombre" maxlength="100" required></label>
+        <label class="full">Descripción<textarea formControlName="descripcion" maxlength="255" rows="3"></textarea></label>
+        @if (formError) { <div class="alert full" role="alert">{{ formError }}</div> }
+        <div class="form-actions full"><button class="secondary-button" type="button" (click)="cancelForm()" [disabled]="saving">Cancelar</button>
+          <button class="primary-button" type="submit" [disabled]="saving || !!pending">{{ mode === 'create' ? 'Crear rol' : 'Revisar cambios' }}</button></div>
+      </form>
+    </section>
+  }
+
+  @if (pending) {
+    <section class="panel confirmation" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+      <p class="eyebrow">CONFIRMACIÓN</p><h2 id="confirm-title">Confirmar cambios del rol</h2>
+      <p id="confirm-description">Este cambio afecta al rol <strong>{{ selected?.nombre }}</strong> y puede afectar a todos los usuarios que lo comparten. ¿Deseas continuar?</p>
+      <div class="form-actions"><button class="secondary-button" type="button" (click)="cancelConfirmation()" [disabled]="saving">Cancelar</button>
+        <button class="primary-button" type="button" (click)="confirm()" [disabled]="saving">{{ saving ? 'Guardando…' : 'Confirmar cambio' }}</button></div>
+    </section>
+  }
+
+  @if (loading) { <section class="panel status" role="status">Cargando roles y permisos…</section> }
+  @else if (!error && filteredRoles.length === 0) { <section class="panel status" role="status"><h2>{{ roles.length ? 'No encontramos roles' : 'Aún no hay roles registrados' }}</h2><p>{{ roles.length ? 'Prueba otra búsqueda.' : 'Crea un rol para comenzar.' }}</p></section> }
+  @else if (filteredRoles.length > 0) {
+    <section class="panel table-panel" aria-label="Roles registrados"><div class="table-heading"><div><p class="eyebrow">ACCESO</p><h2>Roles</h2></div><span>{{ filteredRoles.length }} resultado(s)</span></div>
+      <div class="table-scroll"><table><thead><tr><th scope="col">Rol</th><th scope="col">Código</th><th scope="col">Permisos</th><th scope="col">Acciones</th></tr></thead><tbody>
+        @for (role of filteredRoles; track role.id) { <tr><td><strong>{{ role.nombre }}</strong><span class="email">{{ role.descripcion || 'Sin descripción' }}</span></td><td>{{ role.codigo }}</td><td>{{ role.permisos.length }}</td>
+          <td><button class="link-button" type="button" (click)="details(role)" [disabled]="detailLoading || saving">Ver detalle</button></td></tr> }
+      </tbody></table></div>
+    </section>
+  }
+  @if (detailLoading) { <section class="panel status" role="status">Cargando detalle…</section> }
+  @if (selected) {
+    <section class="panel detail" aria-labelledby="role-detail-title"><div class="section-heading"><div><p class="eyebrow">DETALLE DE ROL · {{ selected.codigo }}</p><h2 id="role-detail-title">{{ selected.nombre }}</h2><p>{{ selected.descripcion || 'Sin descripción' }}</p></div>
+      <button class="secondary-button" type="button" (click)="editRole()" [disabled]="saving || !!pending || !canEditSelected">Editar rol</button></div>
+      @if (masterRole) { <p class="protected-note">Este rol está asignado al Administrador Maestro. Sus permisos esenciales deben conservarse.</p> }
+      <h3>Permisos asignados</h3>
+      @if (selected.permisos.length === 0) { <p class="hint">Este rol aún no tiene permisos asignados.</p> }
+      @else { <p class="assigned">{{ selected.permisos.join(', ') }}</p> }
+      @if (missingCodes.length) { <p class="alert" role="alert">No se encuentran estos permisos en el catálogo: {{ missingCodes.join(', ') }}. No es posible reemplazarlos sin actualizar los datos.</p> }
+      @if (!canEditSelected) { <p class="protected-note">Solo el Administrador Maestro puede modificar este rol privilegiado.</p> }
+      @else if (cannotReplace && !missingCodes.length) { <p class="alert" role="alert">El rol contiene una autoridad reservada; requiere revisión antes de cambiar permisos.</p> }
+      <fieldset class="permission-list" [disabled]="saving || !!pending || cannotReplace"><legend>Seleccionar permisos</legend>
+        @for (permission of permissions; track permission.id) { <label class="permission-option"><input type="checkbox" [checked]="selectedIds.has(permission.id)" [disabled]="isLocked(permission)"
+          (change)="togglePermission(permission, $any($event.target).checked)"><span><strong>{{ permission.codigo }}</strong><small>{{ permission.descripcion || 'Sin descripción' }}</small></span>
+          @if (isLocked(permission)) { <span class="badge">Protegido</span> }</label> }
+        @if (permissions.length === 0) { <p class="hint">No hay permisos disponibles.</p> }
+      </fieldset>
+      <div class="form-actions"><button class="primary-button" type="button" (click)="requestPermissions()" [disabled]="saving || !!pending || cannotReplace">Revisar permisos</button></div>
+    </section>
+  }
+
+  <section class="panel table-panel" aria-labelledby="permissions-title"><div class="table-heading"><div><p class="eyebrow">CATÁLOGO</p><h2 id="permissions-title">Permisos disponibles</h2></div>
+    <button class="secondary-button" type="button" (click)="permissionFormOpen = true; formError = null" [disabled]="loading || saving">Crear permiso</button></div>
+    @if (permissionFormOpen) { <form class="user-form permission-form" [formGroup]="permissionForm" (ngSubmit)="createPermission()" novalidate>
+      <label>Código<input formControlName="codigo" maxlength="80" required></label><label>Descripción<input formControlName="descripcion" maxlength="255"></label>
+      @if (formError) { <div class="alert full" role="alert">{{ formError }}</div> }
+      <div class="form-actions full"><button class="secondary-button" type="button" (click)="cancelForm()" [disabled]="saving">Cancelar</button><button class="primary-button" type="submit" [disabled]="saving">Crear permiso</button></div></form> }
+    @if (!loading && permissions.length === 0) { <p class="hint">No hay permisos disponibles.</p> }
+    @if (permissions.length > 0) { <div class="table-scroll"><table><thead><tr><th scope="col">Código</th><th scope="col">Descripción</th></tr></thead><tbody>
+      @for (permission of permissions; track permission.id) { <tr><td><strong>{{ permission.codigo }}</strong>@if (isReserved(permission.codigo)) { <span class="badge">Reservado</span> }</td><td>{{ permission.descripcion || 'Sin descripción' }}</td></tr> }
+    </tbody></table></div> }
+  </section>
+</app-shell>

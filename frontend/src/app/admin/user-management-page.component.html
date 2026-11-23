@@ -1,0 +1,72 @@
+<app-shell breadcrumb="Administración / Usuarios" footerText="Gestión de usuarios">
+  <section class="intro" aria-labelledby="page-title">
+    <p class="eyebrow">ADMINISTRACIÓN · ACCESO</p>
+    <h1 id="page-title">Gestión de usuarios</h1>
+    <p class="intro-copy">Consulta las cuentas de la organización y administra su acceso.</p>
+  </section>
+
+  @if (success) { <div class="notice" role="status">{{ success }}</div> }
+  @if (error) { <div class="alert" role="alert">{{ error }} <button type="button" class="link-button" (click)="load()">Actualizar lista</button></div> }
+
+  <section class="panel toolbar" aria-label="Buscar usuarios">
+    <div class="filters">
+      <label>Buscar por nombre o correo<input type="search" [(ngModel)]="search" placeholder="Nombre o correo" autocomplete="off"></label>
+      <label>Estado<select [(ngModel)]="stateFilter"><option value="">Todos</option>@for (state of states; track state) { <option [value]="state">{{ state }}</option> }</select></label>
+      <label>Rol<select [(ngModel)]="roleFilter"><option value="">Todos</option>@for (role of roles; track role.id) { <option [value]="role.id">{{ role.nombre }}</option> }</select></label>
+    </div>
+    <button class="primary-button" type="button" (click)="create()" [disabled]="loading || saving || assignableRoles.length === 0">Crear usuario</button>
+  </section>
+
+  @if (!loading && !error && assignableRoles.length === 0) { <p class="hint" role="status">No hay roles disponibles para crear usuarios con tu cuenta.</p> }
+
+  @if (mode) {
+    <section class="panel form-panel" aria-labelledby="form-title">
+      <div class="section-heading"><div><p class="eyebrow">CUENTA</p><h2 id="form-title">{{ mode === 'create' ? 'Crear usuario' : 'Editar usuario' }}</h2></div></div>
+      <form class="user-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <label>Nombre<input formControlName="nombre" maxlength="100" autocomplete="given-name" required></label>
+        <label>Apellido<input formControlName="apellido" maxlength="100" autocomplete="family-name" required></label>
+        <label>Correo electrónico<input type="email" formControlName="correo" maxlength="150" autocomplete="email" required></label>
+        @if (mode === 'create') {
+          <label>Rol<select formControlName="rolId"><option [ngValue]="0">Selecciona un rol</option>@for (role of assignableRoles; track role.id) { <option [ngValue]="role.id">{{ role.nombre }}</option> }</select></label>
+          <label>Estado<select formControlName="estado">@for (state of states; track state) { <option [value]="state">{{ state }}</option> }</select></label>
+          <label>Contraseña inicial<input type="password" formControlName="password" autocomplete="new-password" required><small>De 12 a 128 caracteres; máximo 72 bytes UTF-8.</small></label>
+        }
+        @if (formError) { <div class="alert full" role="alert">{{ formError }}</div> }
+        <div class="form-actions full"><button class="secondary-button" type="button" (click)="cancelForm()" [disabled]="saving">Cancelar</button><button class="primary-button" type="submit" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar usuario' }}</button></div>
+      </form>
+    </section>
+  }
+
+  @if (pending) {
+    <section class="panel confirmation" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+      <div><p class="eyebrow">CONFIRMACIÓN</p><h2 id="confirm-title">Confirmar cambio de {{ pending.kind }}</h2>
+        <p id="confirm-description">¿Cambiar {{ pending.kind }} de {{ pending.user.nombre }} {{ pending.user.apellido }} a <strong>{{ pending.kind === 'rol' ? roleName(pending.value) : pending.value }}</strong>?</p></div>
+      <div class="form-actions"><button class="secondary-button" type="button" (click)="cancelChange()" [disabled]="saving">Cancelar</button><button class="primary-button" type="button" (click)="confirmChange()" [disabled]="saving">{{ saving ? 'Guardando…' : 'Confirmar cambio' }}</button></div>
+    </section>
+  }
+
+  @if (detailLoading) { <section class="panel status" role="status">Cargando detalle…</section> }
+  @if (selected) {
+    <section class="panel detail" aria-labelledby="detail-title"><div class="section-heading"><div><p class="eyebrow">DETALLE DE CUENTA</p><h2 id="detail-title">{{ selected.nombre }} {{ selected.apellido }}</h2></div><button class="secondary-button" type="button" (click)="selected = null">Cerrar</button></div>
+      <dl><div><dt>Correo</dt><dd>{{ selected.correo }}</dd></div><div><dt>Rol</dt><dd>{{ selected.rolNombre }}</dd></div><div><dt>Estado</dt><dd>{{ selected.estado }}</dd></div><div><dt>Registrado</dt><dd>{{ (selected.creadoEn | date:'dd/MM/yyyy HH:mm') || 'No disponible' }}</dd></div></dl>
+      @if (selected.administradorMaestro) { <p class="protected-note">Administrador Maestro · cuenta protegida</p> }
+    </section>
+  }
+
+  @if (loading) { <section class="panel status" role="status">Cargando usuarios…</section> }
+  @else if (!error && filteredUsers.length === 0) { <section class="panel status" role="status"><h2>{{ users.length ? 'No encontramos usuarios' : 'Aún no hay usuarios registrados' }}</h2><p>{{ users.length ? 'Prueba otros filtros de búsqueda.' : 'Crea una cuenta para comenzar.' }}</p></section> }
+  @else if (users.length > 0) {
+    <section class="panel table-panel" aria-label="Usuarios registrados"><div class="table-heading"><div><p class="eyebrow">CUENTAS</p><h2>Usuarios</h2></div><span>{{ filteredUsers.length }} resultado(s)</span></div>
+      <div class="table-scroll"><table><thead><tr><th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead><tbody>
+        @for (user of filteredUsers; track user.id) {
+          <tr><td><strong>{{ user.nombre }} {{ user.apellido }}</strong>@if (user.administradorMaestro) { <span class="master-badge">Administrador Maestro</span> }<span class="email">{{ user.correo }}</span></td>
+            <td>{{ user.rolNombre }}</td><td><span class="state" [class.active]="user.estado === 'ACTIVO'">{{ user.estado }}</span></td>
+            <td><div class="actions"><button type="button" class="link-button" (click)="details(user)" [disabled]="detailLoading">Detalle</button><button type="button" class="link-button" (click)="edit(user)" [disabled]="!canManage(user) || saving">Editar</button>
+              <label class="action-select">Estado<select [value]="user.estado" [disabled]="!canManage(user) || saving" (change)="requestChange(user, 'estado', $any($event.target).value); $any($event.target).value = user.estado">@for (state of states; track state) { <option [value]="state">{{ state }}</option> }</select></label>
+              <label class="action-select">Rol<select [value]="user.rolId" [disabled]="!canManage(user) || saving" (change)="requestChange(user, 'rol', $any($event.target).value); $any($event.target).value = user.rolId">@if (!canManage(user)) { <option [value]="user.rolId">{{ user.rolNombre }}</option> } @else { @for (role of assignableRoles; track role.id) { <option [value]="role.id">{{ role.nombre }}</option> } }</select></label>
+            </div></td></tr>
+        }
+      </tbody></table></div>
+    </section>
+  }
+</app-shell>

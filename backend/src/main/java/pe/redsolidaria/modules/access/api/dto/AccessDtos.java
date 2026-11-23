@@ -12,7 +12,7 @@ public final class AccessDtos {
 
     public record UserResponse(Long id, String nombre, String apellido, String correo,
                                String estado, Long rolId, String rolCodigo, String rolNombre,
-                               LocalDateTime creadoEn, LocalDateTime actualizadoEn) {}
+                               LocalDateTime creadoEn, LocalDateTime actualizadoEn, boolean administradorMaestro) {}
     public record RoleResponse(Long id, String codigo, String nombre, String descripcion,
                                LocalDateTime creadoEn, Set<String> permisos) {}
     public record PermissionResponse(Long id, String codigo, String descripcion,
@@ -20,7 +20,7 @@ public final class AccessDtos {
     public record AuthenticatedProfileResponse(String nombre, String apellido, String correo,
                                               String rolCodigo, String rolNombre, Set<String> permisos) {}
 
-    public record CreateUserRequest(@NotNull Long rolId, @NotBlank @Size(max = 100) String nombre,
+    public record CreateUserRequest(@NotNull @jakarta.validation.constraints.Positive Long rolId, @NotBlank @Size(max = 100) String nombre,
                                     @NotBlank @Size(max = 100) String apellido,
                                     @NotBlank @Email @Size(max = 150) String correo,
                                     @NotBlank @Size(min = 12, max = 128) String password,
@@ -31,11 +31,16 @@ public final class AccessDtos {
         }
     }
     public record ChangeUserStateRequest(@NotBlank @Size(max = 20) String estado) {}
-    public record ChangeUserRoleRequest(@NotNull Long rolId) {}
+    public record UpdateUserRequest(@NotBlank @Size(max = 100) String nombre,
+                                    @NotBlank @Size(max = 100) String apellido,
+                                    @NotBlank @Email @Size(max = 150) String correo) {}
+    public record ChangeUserRoleRequest(@NotNull @jakarta.validation.constraints.Positive Long rolId) {}
     public record CreateRoleRequest(@NotBlank @Size(max = 50) String codigo,
                                     @NotBlank @Size(max = 100) String nombre,
                                     @Size(max = 255) String descripcion) {}
-    public record ReplaceRolePermissionsRequest(@NotNull Set<@NotNull Long> permisoIds) {}
+    public record UpdateRoleRequest(@NotBlank @Size(max = 100) String nombre,
+                                    @Size(max = 255) String descripcion) {}
+    public record ReplaceRolePermissionsRequest(@NotNull Set<@NotNull @jakarta.validation.constraints.Positive Long> permisoIds) {}
     public record CreatePermissionRequest(@NotBlank @Size(max = 80) String codigo,
                                           @Size(max = 255) String descripcion) {}
 }

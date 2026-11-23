@@ -31,6 +31,18 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
             """)
     List<Donation> findAdministrativeList(@Param("codigo") String codigo, @Param("estado") String estado);
 
+    @EntityGraph(attributePaths = {"donante", "emergencia", "centroAcopio"})
+    @Query("""
+            select d from Donation d
+            where (:codigo is null or lower(d.codigoTrazabilidad) like lower(concat('%', :codigo, '%')))
+              and (:estado is null or upper(d.estado) = upper(:estado))
+              and (:desde is null or d.fechaRegistro >= :desde)
+              and (:hasta is null or d.fechaRegistro < :hasta)
+            order by d.fechaRegistro desc, d.id desc
+            """)
+    List<Donation> findAdministrativeListByDate(@Param("codigo") String codigo, @Param("estado") String estado,
+            @Param("desde") java.time.LocalDateTime desde, @Param("hasta") java.time.LocalDateTime hasta);
+
     @EntityGraph(attributePaths = {
             "donante", "emergencia", "centroAcopio", "detalles",
             "detalles.recurso", "detalles.recurso.unidadMedida"

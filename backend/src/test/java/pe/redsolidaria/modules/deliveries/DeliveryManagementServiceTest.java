@@ -71,6 +71,9 @@ class DeliveryManagementServiceTest {
         when(lines.deliveredToPair(1L, 10L)).thenReturn(q("0"));
         when(lines.assignedToDonation(10L)).thenReturn(q("0"));
         when(lines.assignedToNeed(1L)).thenReturn(q("0"));
+        when(lines.distributionAssignedToPair(1L, 10L)).thenReturn(q("0"));
+        when(lines.distributionDeliveredToPair(1L, 10L)).thenReturn(q("0"));
+        when(lines.distributionDelivered(10L)).thenReturn(q("0"));
         var delivery = mock(Delivery.class);
         when(delivery.getId()).thenReturn(20L);
         when(deliveries.saveAndFlush(any())).thenReturn(delivery);
@@ -99,11 +102,42 @@ class DeliveryManagementServiceTest {
         when(lines.assignedToPair(1L, 10L)).thenReturn(q("4"));
         when(lines.assignedToDonation(10L)).thenReturn(q("4"));
         when(lines.assignedToNeed(1L)).thenReturn(q("4"));
+        when(lines.distributionAssignedToPair(1L, 10L)).thenReturn(q("4"));
         service.save(1, 10, "admin@example.test", request("4", "3"));
         var detail = ArgumentCaptor.forClass(DeliveryLine.class);
         verify(lines).saveAndFlush(detail.capture());
         assertEquals(0, detail.getValue().getCantidadAsignada().signum());
         assertEquals(q("3"), detail.getValue().getCantidadEntregada());
+    }
+
+    @Test void historicalReservationCannotFundDeliveryWithoutDistributionCustody() {
+        when(lines.assignedToPair(1L, 10L)).thenReturn(q("4"));
+        when(lines.assignedToNeed(1L)).thenReturn(q("4"));
+        when(logistics.received(10L)).thenReturn(q("0"));
+        assertEquals(409, assertThrows(ResponseStatusException.class,
+                () -> service.save(1, 10, "admin@example.test", request("4", "3"))).getStatusCode().value());
+        verifyNoInteractions(deliveries, audit); verify(lines, never()).saveAndFlush(any());
+    }
+
+    @Test void mixedHistoricalAndDistributionReservationsPermitOnlyDistributionRemainder() {
+        when(lines.assignedToPair(1L, 10L)).thenReturn(q("5"));
+        when(lines.deliveredToPair(1L, 10L)).thenReturn(q("1"));
+        when(lines.assignedToNeed(1L)).thenReturn(q("5"));
+        when(lines.distributionAssignedToPair(1L, 10L)).thenReturn(q("2"));
+        when(lines.distributionDeliveredToPair(1L, 10L)).thenReturn(q("1"));
+        when(lines.distributionDelivered(10L)).thenReturn(q("1"));
+        assertThrows(ResponseStatusException.class, () -> service.save(1, 10, "admin@example.test", request("5", "3")));
+        verifyNoInteractions(deliveries, audit);
+        service.save(1, 10, "admin@example.test", request("5", "2"));
+        verify(lines).saveAndFlush(any());
+    }
+
+    @Test void rejectsDeliveryWhenExistingDistributionDeliveriesExhaustConfirmedReceipt() {
+        when(lines.assignedToPair(1L, 10L)).thenReturn(q("2"));
+        when(lines.distributionAssignedToPair(1L, 10L)).thenReturn(q("2"));
+        when(lines.distributionDelivered(10L)).thenReturn(q("10"));
+        assertThrows(ResponseStatusException.class, () -> service.save(1, 10, "admin@example.test", request("2", "1")));
+        verifyNoInteractions(deliveries, audit);
     }
 
     @Test void rejectsAllocationAlreadyConsumedByOtherNeeds() {

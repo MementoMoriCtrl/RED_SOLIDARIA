@@ -17,6 +17,8 @@
         }
       </select>
     </label>
+    <label>Fecha de registro desde <input type="date" name="fechaDesde" [(ngModel)]="fechaDesde" /></label>
+    <label>Fecha de registro hasta <input type="date" name="fechaHasta" [(ngModel)]="fechaHasta" /></label>
     <button class="primary-button" type="submit" [disabled]="loading">{{ loading ? 'Buscando…' : 'Buscar' }}</button>
   </form>
 

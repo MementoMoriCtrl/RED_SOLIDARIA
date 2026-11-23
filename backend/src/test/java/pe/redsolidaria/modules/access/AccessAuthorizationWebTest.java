@@ -1,8 +1,9 @@
 package pe.redsolidaria.modules.access;
 
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static pe.redsolidaria.test.SessionWebTestUsers.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -43,6 +44,14 @@ class AccessAuthorizationWebTest {
     }
 
     @Test
+    void individualEndpointsRequireAdministrativePermission() throws Exception {
+        mvc.perform(get("/api/admin/usuarios/1")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/admin/roles/1")
+                .with(user("operador").authorities(new SimpleGrantedAuthority("DONACION_REGISTRAR"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void rejectsAuthenticatedUserWithoutAdminPermission() throws Exception {
         mvc.perform(get("/api/admin/usuarios")
                 .with(user("operador").authorities(new SimpleGrantedAuthority("DONACIONES_CONSULTAR"))))
@@ -61,7 +70,7 @@ class AccessAuthorizationWebTest {
     }
 
     @Test
-    void allowsHttpBasicCredentialsLoadedFromUserRepository() throws Exception {
+    void allowsSessionCredentialsLoadedFromUserRepository() throws Exception {
         Role role = new Role("ADMINISTRADOR", "Administrador", null);
         role.asignar(new Permission("ACCESO_ADMINISTRAR", "Administrar acceso"));
         UserAccount account = new UserAccount(role, "Admin", "Prueba", "admin@example.test",
@@ -69,10 +78,12 @@ class AccessAuthorizationWebTest {
         when(users.findByCorreo("admin@example.test")).thenReturn(java.util.Optional.of(account));
         when(service.roles()).thenReturn(List.of());
 
-        mvc.perform(get("/api/admin/roles")
-                        .with(httpBasic("admin@example.test", "clave-de-prueba-segura")))
+        var login = mvc.perform(post("/api/auth/login").with(csrf()).param("correo", "admin@example.test")
+                .param("password", "clave-de-prueba-segura")).andExpect(status().isNoContent()).andReturn();
+        var session = (org.springframework.mock.web.MockHttpSession) login.getRequest().getSession(false);
+        mvc.perform(get("/api/admin/roles").session(session))
                 .andExpect(status().isOk());
-        verify(users).findByCorreo("admin@example.test");
+        verify(users, atLeastOnce()).findByCorreo("admin@example.test");
     }
 
     @TestConfiguration

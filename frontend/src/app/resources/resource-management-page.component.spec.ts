@@ -1,9 +1,10 @@
+import { CsrfService } from '../auth/csrf.service';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { basicAuthInterceptor } from '../auth/basic-auth.interceptor';
+import { sessionInterceptor } from '../auth/session.interceptor';
 import { routes } from '../app.routes';
 import { MeasurementUnit, ResourceItem } from './resource.model';
 import { ResourceManagementPageComponent } from './resource-management-page.component';
@@ -23,12 +24,14 @@ describe('ResourceManagementPageComponent', () => {
       imports: [ResourceManagementPageComponent],
       providers: [
         provideRouter(routes),
-        provideHttpClient(withInterceptors([basicAuthInterceptor])),
+        provideHttpClient(withInterceptors([sessionInterceptor])),
         provideHttpClientTesting(),
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ResourceManagementPageComponent);
     http = TestBed.inject(HttpTestingController);
+    TestBed.inject(CsrfService).get().subscribe();
+    http.expectOne('/api/auth/csrf').flush({ headerName: 'X-CSRF-TOKEN', token: 'test-token' });
     fixture.autoDetectChanges();
     http.expectOne('/api/recursos').flush(initialResources);
     http.expectOne('/api/unidades-medida').flush(units);

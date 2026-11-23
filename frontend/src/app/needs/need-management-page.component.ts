@@ -28,6 +28,8 @@ export class NeedManagementPageComponent implements OnInit {
   needs: ResultPage<NeedItem> = { content: [], totalElements: 0, totalPages: 0, page: 0 };
   sources: ResultPage<DonationSource> = { content: [], totalElements: 0, totalPages: 0, page: 0 };
   selected: NeedItem | null = null; source: DonationSource | null = null;
+  editing: NeedItem | null = null;
+  transitionNeed: NeedItem | null = null; transitionAction: 'cerrar' | 'cancelar' = 'cerrar'; transitionReason = '';
   loading = true; loadingSources = false; saving = false;
   error: string | null = null; success: string | null = null;
   resourceId: number | null = null; quantity: number | null = null; priority = ''; observations = '';
@@ -64,6 +66,55 @@ export class NeedManagementPageComponent implements OnInit {
       .subscribe({ next: () => {
         this.quantity = null; this.observations = ''; this.success = 'Necesidad registrada.';
         this.saving = false; this.load(0);
+      }, error: (response: HttpErrorResponse) => { this.error = this.message(response); } });
+  }
+
+  edit(need: NeedItem): void {
+    if (this.saving || this.loading || this.loadingSources || need.estado !== 'PENDIENTE') return;
+    this.editing = need; this.resourceId = need.recursoId; this.quantity = need.requerida;
+    this.priority = need.prioridad; this.observations = need.observaciones ?? '';
+    this.error = null; this.success = null;
+  }
+
+  beginTransition(need: NeedItem, action: 'cerrar' | 'cancelar'): void {
+    if (this.saving || this.loading || this.loadingSources || need.estado !== 'PENDIENTE') return;
+    this.cancelEdit(); this.selected = null; this.source = null;
+    this.transitionNeed = need; this.transitionAction = action; this.transitionReason = '';
+    this.error = null; this.success = null;
+  }
+
+  submitTransition(): void {
+    if (!this.transitionNeed || this.saving || this.loading || this.loadingSources) return;
+    const motivo = this.transitionReason.trim();
+    if (!motivo || motivo.length > 1000) { this.error = 'Indica un motivo de hasta 1000 caracteres.'; return; }
+    this.saving = true; this.error = null; this.success = null;
+    this.api.transition(this.emergencyId, this.zoneId, this.transitionNeed.id, this.transitionAction, motivo)
+      .pipe(finalize(() => { this.saving = false; this.changeDetector.markForCheck(); }))
+      .subscribe({ next: () => {
+        this.success = this.transitionAction === 'cerrar' ? 'Necesidad cerrada.' : 'Necesidad cancelada.';
+        this.transitionNeed = null; this.transitionReason = ''; this.saving = false; this.load(this.needs.page);
+      }, error: (response: HttpErrorResponse) => { this.error = this.message(response); } });
+  }
+
+  cancelEdit(): void {
+    if (this.saving) return;
+    this.editing = null; this.resourceId = null; this.quantity = null; this.priority = ''; this.observations = '';
+  }
+
+  update(): void {
+    if (!this.editing || this.saving || this.loading || this.loadingSources) return;
+    if (!this.validQuantity(this.quantity, true) || this.quantity! < this.editing.asignada
+        || !this.priority.trim() || this.priority.trim().length > 30
+        || new TextEncoder().encode(this.observations).length > 65535) {
+      this.error = 'Revisa los datos: la cantidad requerida no puede ser menor que la asignada.'; return;
+    }
+    const id = this.editing.id;
+    this.saving = true; this.error = null; this.success = null;
+    this.api.update(this.emergencyId, this.zoneId, id, { cantidad: this.quantity!,
+      prioridad: this.priority.trim(), observaciones: this.observations.trim() || null })
+      .pipe(finalize(() => { this.saving = false; this.changeDetector.markForCheck(); }))
+      .subscribe({ next: () => {
+        this.saving = false; this.cancelEdit(); this.success = 'Necesidad actualizada.'; this.load(this.needs.page);
       }, error: (response: HttpErrorResponse) => { this.error = this.message(response); } });
   }
 

@@ -40,8 +40,15 @@ public class EmergencyManagementService {
 
     @Transactional(readOnly = true)
     public EmergencyPageResponse list(String text, String state, int page, int size) {
-        var results = emergencies.search(clean(text), clean(state), PageRequest.of(page, size,
-                Sort.by(Sort.Order.desc("fechaInicio"), Sort.Order.desc("id"))));
+        return list(text, state, page, size, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public EmergencyPageResponse list(String text, String state, int page, int size, java.time.LocalDate from, java.time.LocalDate to) {
+        pe.redsolidaria.modules.reports.ReportDates.validate(from, to);
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("fechaInicio"), Sort.Order.desc("id")));
+        var results = from == null && to == null ? emergencies.search(clean(text), clean(state), pageable)
+                : emergencies.searchByDate(clean(text), clean(state), from, to, pageable);
         return new EmergencyPageResponse(results.getContent().stream().map(EmergencyManagementService::toListItem).toList(),
                 results.getNumber(), results.getSize(), results.getTotalElements(), results.getTotalPages(), results.isLast());
     }

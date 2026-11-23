@@ -1,7 +1,7 @@
 package pe.redsolidaria.modules.donations;
 
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static pe.redsolidaria.test.SessionWebTestUsers.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import java.math.BigDecimal;
@@ -43,6 +43,7 @@ class MasterVerificationWebTest {
         reset(donations,users,audit,operations);
         var role=new Role("ADMINISTRADOR","Administrador",null);
         role.asignar(new Permission("ACCESO_ADMINISTRAR",null));
+        role.asignar(new Permission("DONACION_REGISTRAR",null));
         var actor=new UserAccount(role,"Actor","Test","actor@example.test","unused","ACTIVO");
         ReflectionTestUtils.setField(actor,"id",3L);
         if (master) ReflectionTestUtils.setField(actor,"adminMaestro",true);

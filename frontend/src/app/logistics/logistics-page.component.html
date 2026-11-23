@@ -21,6 +21,10 @@
             <td>{{ row.enTransito | number:'1.0-3' }}</td><td>{{ row.recibidaDistribucion | number:'1.0-3' }}</td><td>{{ row.disponibleDistribucion | number:'1.0-3' }}</td>
             <td>{{ row.diferencia | number:'1.0-3' }}</td><td>{{ row.reservaHistoricaSinDistribucion | number:'1.0-3' }}</td>
             <td><button type="button" [disabled]="saving || !!pending || !row.centroAcopioId || row.disponibleAcopio <= 0" (click)="selectSource(row)">Trasladar</button></td></tr>
+          <tr><td colspan="11">Saldo bruto acopio: {{ row.saldoBrutoAcopio | number:'1.0-3' }} · Saldo bruto distribución: {{ row.saldoBrutoDistribucion | number:'1.0-3' }}
+            @if ((row.saldoBrutoAcopio ?? 0) < 0) { <p class="alert" role="alert">Conciliar saldo negativo de {{ row.recurso }} / {{ row.unidad }} en {{ row.centroAcopio || 'centro de acopio no identificado' }}: {{ row.saldoBrutoAcopio | number:'1.0-3' }}</p> }
+            @if ((row.saldoBrutoDistribucion ?? 0) < 0) { <p class="alert" role="alert">Conciliar saldo negativo de {{ row.recurso }} / {{ row.unidad }} en {{ row.centroDistribucion || 'centro de distribución no identificado' }}: {{ row.saldoBrutoDistribucion | number:'1.0-3' }}</p> }
+          </td></tr>
         } @empty { <tr><td colspan="11">No hay lotes en esta página.</td></tr> }</tbody></table></div>
       <nav aria-label="Páginas de existencias"><button [disabled]="stockPage === 0" (click)="stockPage = stockPage - 1; load()">Anterior</button><span>Página {{ stockPage + 1 }}</span><button [disabled]="stock.length < 20" (click)="stockPage = stockPage + 1; load()">Siguiente</button></nav>
     </section>
@@ -38,10 +42,30 @@
         <tr><td>{{ row.operacionId }} / {{ row.detalleDonacionId }}</td><td>{{ row.origen }} → {{ row.destino }}</td><td>{{ row.recurso }} / {{ row.unidad }}</td>
           <td>{{ row.cantidadEnviada | number:'1.0-3' }}</td><td>{{ row.cantidadRecibida | number:'1.0-3' }}</td><td>{{ row.estado }}</td>
           <td>{{ row.fechaSalida | date:'dd/MM/yyyy HH:mm' }} / {{ row.responsableSalida }}</td><td>{{ row.fechaRecepcion | date:'dd/MM/yyyy HH:mm' }} / {{ row.responsableRecepcion }}</td>
-          <td>{{ row.observaciones }} {{ row.observacionesRecepcion }}</td><td>@if (row.estado === 'EN_TRANSITO') { <button [disabled]="saving || !!pending" (click)="selectTransfer(row)">Confirmar recepción</button> }</td></tr>
+          <td>{{ row.observaciones }} {{ row.observacionesRecepcion }}
+            @if (row.estado === 'RECIBIDO_CON_DIFERENCIA') {
+              @if (resolutionFor(row); as resolution) {
+                <p>Resolución documental: resuelta · {{ resolution.tipo }} · {{ resolution.fecha | date:'dd/MM/yyyy HH:mm' }} · Responsable: {{ resolution.actorId }}</p>
+                <p>Motivo: {{ resolution.motivo }} · Evidencia: {{ resolution.evidencia || 'No indicada' }}</p>
+                <p>Enviada: {{ resolution.cantidadEnviada }} · Recibida: {{ resolution.cantidadRecibida }} · Diferencia: {{ resolution.diferencia }} {{ row.unidad }}</p>
+              } @else { <p>Resolución documental: pendiente</p> }
+            }
+          </td><td>@if (row.estado === 'EN_TRANSITO') { <button [disabled]="saving || !!pending" (click)="selectTransfer(row)">Confirmar recepción</button> }
+            @if (row.estado === 'RECIBIDO_CON_DIFERENCIA' && !resolutionFor(row)) { <button [disabled]="saving || !!pending" (click)="selectResolution(row)">Documentar resolución</button> }</td></tr>
       } @empty { <tr><td colspan="10">No hay traslados en esta página.</td></tr> }</tbody></table></div>
       <nav aria-label="Páginas de traslados"><button [disabled]="historyPage === 0" (click)="historyPage = historyPage - 1; load()">Anterior</button><span>Página {{ historyPage + 1 }}</span><button [disabled]="transfers.length < 20" (click)="historyPage = historyPage + 1; load()">Siguiente</button></nav>
     </section>
+    @if (resolutionTransfer && !pending) {
+      <section class="panel"><h2>Resolución documental del traslado {{ resolutionTransfer.operacionId }}</h2>
+        <p>Esta resolución no modifica las cantidades ni las existencias.</p>
+        <form #resolutionForm="ngForm" (ngSubmit)="resolve()"><fieldset [disabled]="saving">
+          <label>Tipo<select name="resolutionType" [(ngModel)]="resolutionType" required><option value="">Selecciona tipo</option><option value="PERDIDA">Pérdida</option><option value="DANO">Daño</option><option value="ERROR_DOCUMENTAL">Error documental</option><option value="OTRO">Otro</option></select></label>
+          <label>Motivo<textarea name="resolutionReason" [(ngModel)]="resolutionReason" maxlength="2000" required></textarea></label>
+          <label>Evidencia o referencia opcional<textarea name="resolutionEvidence" [(ngModel)]="resolutionEvidence" maxlength="2000"></textarea></label>
+          <button class="primary-button" type="submit" [disabled]="resolutionForm.invalid || !resolutionReason.trim()">Registrar resolución final</button>
+        </fieldset></form>
+      </section>
+    }
     @if (selectedTransfer && !pending) {
       <section class="panel"><h2>Recepción en {{ selectedTransfer.destino }}</h2><p>Operación {{ selectedTransfer.operacionId }}. Las diferencias quedan registradas sin devolver existencias automáticamente al origen.</p>
         <form #receiveForm="ngForm" (ngSubmit)="receive()"><fieldset [disabled]="saving">

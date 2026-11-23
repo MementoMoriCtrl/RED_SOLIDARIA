@@ -23,8 +23,11 @@ public class DonationAdministrationController {
     @GetMapping("/listado")
     public List<AdministrativeDonationListItem> list(
             @RequestParam(required = false) @Size(max = 100) String codigo,
-            @RequestParam(required = false) @Size(max = 30) String estado) {
-        return service.listAdministrative(codigo, estado);
+            @RequestParam(required = false) @Size(max = 30) String estado,
+            @RequestParam(required = false) java.time.LocalDate fechaDesde,
+            @RequestParam(required = false) java.time.LocalDate fechaHasta) {
+        return fechaDesde == null && fechaHasta == null ? service.listAdministrative(codigo, estado)
+                : service.listAdministrative(codigo, estado, fechaDesde, fechaHasta);
     }
 
     @GetMapping("/{id}")

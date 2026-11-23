@@ -64,7 +64,7 @@
               <button type="button" (click)="lines.push({ recursoId: null, cantidad: null })">Añadir recurso</button>
             </div>
             <div class="donation-form-grid">
-              <label>Ubicación<input name="location" [(ngModel)]="location" maxlength="200" placeholder="Lugar de referencia (opcional)" /></label>
+              <label>Lugar de presentación / punto de recogida<input name="location" [(ngModel)]="location" maxlength="200" placeholder="Ej.: Jr. Los Laureles 245, Castilla, Piura" aria-describedby="donation-location-help" /><span id="donation-location-help" class="donation-help">Indique la dirección donde se recibió o recogió físicamente la donación: domicilio del donante, instalaciones de una empresa o punto de colecta. Campo opcional.</span></label>
               <label>Observaciones<textarea name="observations" [(ngModel)]="observations" rows="3" placeholder="Información adicional (opcional)"></textarea></label>
             </div>
             <div class="donation-form-footer"><span class="donation-help">Revisa los datos antes de registrar la donación.</span><button class="donation-primary" type="submit" [disabled]="donationForm.invalid || searching || resources.length === 0">Registrar donación</button></div>
@@ -99,10 +99,23 @@
               @else if (!catalogs[catalogKind].content.length) { <p class="donation-empty" role="status">No hay resultados para {{ catalogKind }}.</p> }
               @else {
                 <ul class="donation-results">
-                  @for (item of catalogs[catalogKind].content; track item.id) { <li><div class="donation-result-title"><strong>{{ item.nombre }}</strong><span>ID {{ item.id }}</span></div>@if (item.ubicacion) { <p class="donation-help">{{ item.ubicacion }}</p> }</li> }
+                  @for (item of catalogs[catalogKind].content; track item.id) { <li><div class="donation-result-title"><strong>{{ item.nombre }}</strong><span>ID {{ item.id }}</span></div>@if (item.ubicacion) { <p class="donation-help">{{ item.ubicacion }}</p> }<button type="button" [disabled]="saving || searching" (click)="editCatalog(item)" [attr.aria-label]="'Editar ' + item.nombre + ', ID ' + item.id">Editar</button></li> }
                 </ul>
               }
             </section>
+            @if (editingCatalog && editingCatalog.kind === catalogKind) {
+              <section class="panel donation-panel"><h2>Editar {{ catalogKind === 'donantes' ? 'donante' : 'centro de acopio' }} · ID {{ editingCatalog.id }}</h2>
+                <form #editForm="ngForm" (ngSubmit)="saveCatalogEdit()"><fieldset [disabled]="saving">
+                  <label>Nombre *<input name="editName" [(ngModel)]="editName" required maxlength="150" /></label>
+                  @if (catalogKind === 'centros') {
+                    <label>Ubicación<input name="editLocation" [(ngModel)]="editLocation" maxlength="200" /></label>
+                    <label>Descripción<textarea name="editDescription" [(ngModel)]="editDescription" rows="3"></textarea></label>
+                  }
+                  <button type="submit" [disabled]="editForm.invalid">Guardar cambios</button>
+                  <button type="button" (click)="editingCatalog = null">Cancelar edición</button>
+                </fieldset></form>
+              </section>
+            }
             <section class="panel donation-panel" aria-labelledby="create-catalog-title">
               <div class="donation-section-heading"><h2 id="create-catalog-title">{{ activeTab === 'donantes' ? 'Añadir donante' : 'Añadir centro de acopio' }}</h2><p>Incorpora un nuevo registro para utilizarlo en las donaciones.</p></div>
               <form #catalogForm="ngForm" (ngSubmit)="createCatalog()"><fieldset class="donation-fields" [disabled]="saving || searching">
@@ -124,8 +137,19 @@
               @if (unitsLoading) { <p role="status">Cargando unidades…</p> }
               @else if (unitsError) { <p class="alert" role="alert">{{ unitsError }}</p><button type="button" (click)="reloadUnits()">Reintentar</button> }
               @else if (!filteredUnits.length) { <p class="donation-empty" role="status">No hay unidades que coincidan con la búsqueda.</p> }
-              @else { <ul class="donation-results">@for (unit of filteredUnits; track unit.id) { <li><div class="donation-result-title"><strong>{{ unit.nombre }}</strong><span>ID {{ unit.id }}</span></div><p class="donation-help">{{ unit.codigo }}{{ unit.simbolo ? ' · ' + unit.simbolo : '' }}</p></li> }</ul> }
+              @else { <ul class="donation-results">@for (unit of filteredUnits; track unit.id) { <li><div class="donation-result-title"><strong>{{ unit.nombre }}</strong><span>ID {{ unit.id }}</span></div><p class="donation-help">{{ unit.codigo }}{{ unit.simbolo ? ' · ' + unit.simbolo : '' }}</p><button type="button" [disabled]="saving || unitsLoading" (click)="editUnit(unit)" [attr.aria-label]="'Editar unidad ' + unit.nombre + ', ID ' + unit.id">Editar</button></li> }</ul> }
             </section>
+            @if (editingUnit) {
+              <section class="panel donation-panel"><h2>Editar unidad {{ editingUnit.codigo }}</h2>
+                <p>El código no cambia. El nombre y símbolo actualizados se mostrarán en los registros vinculados.</p>
+                <form #editUnitForm="ngForm" (ngSubmit)="saveUnitEdit()"><fieldset [disabled]="saving">
+                  <label>Nombre *<input name="editUnitName" [(ngModel)]="editUnitName" maxlength="80" required /></label>
+                  <label>Símbolo<input name="editUnitSymbol" [(ngModel)]="editUnitSymbol" maxlength="20" /></label>
+                  <button type="submit" [disabled]="editUnitForm.invalid">Guardar cambios</button>
+                  <button type="button" (click)="editingUnit = null">Cancelar edición</button>
+                </fieldset></form>
+              </section>
+            }
             <section class="panel donation-panel" aria-labelledby="create-unit-title">
               <div class="donation-section-heading"><h2 id="create-unit-title">Añadir unidad de medida</h2><p>Define cómo se expresan las cantidades de los recursos.</p></div>
               <form #unitForm="ngForm" (ngSubmit)="createUnit()"><fieldset class="donation-fields" [disabled]="saving">

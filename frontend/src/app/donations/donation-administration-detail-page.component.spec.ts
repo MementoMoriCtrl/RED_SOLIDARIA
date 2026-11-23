@@ -1,10 +1,11 @@
+import { CsrfService } from '../auth/csrf.service';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { basicAuthInterceptor } from '../auth/basic-auth.interceptor';
-import { BasicAuthService } from '../auth/basic-auth.service';
+import { sessionInterceptor } from '../auth/session.interceptor';
+import { SessionAuthService } from '../auth/session-auth.service';
 import { DonationAdministrationDetailPageComponent } from './donation-administration-detail-page.component';
 
 describe('DonationAdministrationDetailPageComponent', () => {
@@ -18,13 +19,14 @@ describe('DonationAdministrationDetailPageComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '42' } } } },
-        provideHttpClient(withInterceptors([basicAuthInterceptor])), provideHttpClientTesting(),
+        provideHttpClient(withInterceptors([sessionInterceptor])), provideHttpClientTesting(),
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(DonationAdministrationDetailPageComponent);
     http = TestBed.inject(HttpTestingController);
-    const auth = TestBed.inject(BasicAuthService);
-    auth.provideCredentials('admin', 'memory-only');
+    TestBed.inject(CsrfService).get().subscribe();
+    http.expectOne('/api/auth/csrf').flush({ headerName: 'X-CSRF-TOKEN', token: 'test-token' });
+    const auth = TestBed.inject(SessionAuthService);
     auth.markAuthenticated({ nombre: 'Admin', apellido: 'Test', correo: 'admin@example.test', rolCodigo: 'ADMIN', rolNombre: 'Admin', permisos: ['ACCESO_ADMINISTRAR'] });
     fixture.autoDetectChanges();
   });
@@ -56,6 +58,22 @@ describe('DonationAdministrationDetailPageComponent', () => {
     expect(fixture.componentInstance.loading).toBe(false);
     expect(fixture.nativeElement.textContent).not.toContain('Cargando detalle');
     expect(fixture.nativeElement.textContent).toContain('No encontramos la donación solicitada');
+  });
+
+  it('shows the exact presentation address only in the private administrative detail', async () => {
+    http.expectOne('/api/donaciones/administracion/42').flush({ ...donationResponse(0),
+      trazabilidadAdministrativa: { lugarPresentacion: 'Domicilio privado 245',
+        situacion: { presentacion: 'Dirección exacta protegida por privacidad', emergencia: null, recursos: [] },
+        operaciones: [{ recurso: 'Arroz', unidad: 'KG', operacion: 'uuid-interno', responsableId: 7,
+          responsableNombre: 'Responsable privado', observaciones: 'Nota interna',
+          movimiento: { evento: 'SALIDA_TRASLADO', fechaHora: '2026-11-12T10:00:00', estado: 'EN_TRANSITO',
+            origen: { tipo: 'ACOPIO', nombre: 'Acopio', direccionInstitucional: 'Dirección institucional' },
+            destino: null, zona: null, cantidadEnviada: 2, cantidadRecibida: null } }] } });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).toContain('Domicilio privado 245');
+    expect(fixture.nativeElement.textContent).toContain('Responsable privado');
+    expect(fixture.nativeElement.textContent).toContain('Nota interna');
+    expect(fixture.nativeElement.textContent).toContain('No representa la ubicación logística actual');
   });
 
   it('submits a partial receipt, stops saving, and reloads the donation after success', async () => {
@@ -295,7 +313,7 @@ describe('DonationAdministrationDetailPageComponent', () => {
 
   it('opens the master self-verification form only when the server permits it and shows real identities', async () => {
     const page = await prepareVerification();
-    const auth = TestBed.inject(BasicAuthService);
+    const auth = TestBed.inject(SessionAuthService);
     auth.markAuthenticated({...auth.profile()!, permisos: ['ACCESO_ADMINISTRAR', 'ADMIN_MAESTRO']});
     page.verification = [progress(true)];
     page.receipts = [{operacionId: 'master-receipt', decision: null, decisorId: null, fechaDecision: null, observacionesDecision: null,

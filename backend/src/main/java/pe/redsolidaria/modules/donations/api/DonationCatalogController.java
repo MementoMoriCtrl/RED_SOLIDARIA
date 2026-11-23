@@ -22,9 +22,20 @@ public class DonationCatalogController {
     public CatalogItem create(@PathVariable String kind, @Valid @RequestBody CreateCatalogRequest request, Authentication authentication) {
         return service.create(kind, authentication.getName(), request);
     }
+    @GetMapping("/api/admin/catalogos-donaciones/{kind}/{id}")
+    public CatalogDetail detail(@PathVariable String kind, @PathVariable long id) { return service.detail(kind, id); }
+    @PutMapping("/api/admin/catalogos-donaciones/{kind}/{id}")
+    public CatalogDetail update(@PathVariable String kind, @PathVariable long id,
+            @Valid @RequestBody CreateCatalogRequest request, Authentication authentication) {
+        return service.update(kind, id, authentication.getName(), request);
+    }
     @PostMapping("/api/admin/catalogos-donaciones/unidades")
     @ResponseStatus(HttpStatus.CREATED)
     public pe.redsolidaria.modules.resources.api.dto.ResourceDtos.MeasurementUnitResponse createUnit(
             @Valid @RequestBody pe.redsolidaria.modules.resources.api.dto.ResourceDtos.CreateMeasurementUnitRequest request,
             Authentication authentication) { return service.createUnit(authentication.getName(), request); }
+    @PutMapping("/api/admin/catalogos-donaciones/unidades/{id}")
+    public pe.redsolidaria.modules.resources.api.dto.ResourceDtos.MeasurementUnitResponse updateUnit(@PathVariable long id,
+            @Valid @RequestBody pe.redsolidaria.modules.resources.api.dto.ResourceDtos.UpdateMeasurementUnitRequest request,
+            Authentication authentication) { return service.updateUnit(id, authentication.getName(), request); }
 }

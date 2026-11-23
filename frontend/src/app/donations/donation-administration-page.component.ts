@@ -22,15 +22,19 @@ export class DonationAdministrationPageComponent implements OnInit {
   donations: AdministrativeDonationListItem[] = [];
   codigo = '';
   estado = '';
+  fechaDesde = ''; fechaHasta = '';
   loading = true;
   error: string | null = null;
 
   ngOnInit(): void { this.load(); }
 
   load(): void {
+    if (this.fechaDesde && this.fechaHasta && this.fechaDesde > this.fechaHasta) {
+      this.error = 'La fecha inicial no puede ser posterior a la final.'; this.loading = false; return;
+    }
     this.loading = true;
     this.error = null;
-    this.api.list({ codigo: this.codigo, estado: this.estado }).pipe(finalize(() => {
+    this.api.list({ codigo: this.codigo, estado: this.estado, fechaDesde: this.fechaDesde, fechaHasta: this.fechaHasta }).pipe(finalize(() => {
       this.loading = false;
       this.changeDetector.markForCheck();
     })).subscribe({

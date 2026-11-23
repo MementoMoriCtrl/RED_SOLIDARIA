@@ -27,5 +27,6 @@ public final class LogisticsDtos {
             String centroAcopio, String recurso, String unidad, BigDecimal recibidaAcopio,
             BigDecimal trasladada, BigDecimal recibidaDistribucion, BigDecimal asignada,
             BigDecimal disponibleAcopio, BigDecimal disponibleDistribucion, BigDecimal enTransito,
-            BigDecimal diferencia, BigDecimal reservaHistoricaSinDistribucion) {}
+            BigDecimal diferencia, BigDecimal reservaHistoricaSinDistribucion,
+            BigDecimal saldoBrutoAcopio, BigDecimal saldoBrutoDistribucion, String centroDistribucion) {}
 }

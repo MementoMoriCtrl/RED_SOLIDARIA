@@ -7,12 +7,13 @@ import { finalize } from 'rxjs';
 import { AppShellComponent } from '../shared/app-shell.component';
 import { AdministrativeDonationDetail, RegisterDonationReceiptRequest } from './donation-admin.model';
 import { DonationAdminService } from './donation-admin.service';
-import { BasicAuthService } from '../auth/basic-auth.service';
+import { SessionAuthService } from '../auth/session-auth.service';
+import { DonationCustodyComponent } from './donation-custody.component';
 
 @Component({
   selector: 'app-donation-administration-detail-page',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, RouterLink, AppShellComponent],
+  imports: [DatePipe, DecimalPipe, RouterLink, AppShellComponent, DonationCustodyComponent],
   templateUrl: './donation-administration-detail-page.component.html',
   styleUrl: './donation-administration-detail-page.component.css',
 })
@@ -20,7 +21,7 @@ export class DonationAdministrationDetailPageComponent implements OnInit {
   private readonly api = inject(DonationAdminService);
   private readonly route = inject(ActivatedRoute);
   private readonly changeDetector = inject(ChangeDetectorRef);
-  private readonly auth = inject(BasicAuthService);
+  private readonly auth = inject(SessionAuthService);
 
   donation: AdministrativeDonationDetail | null = null;
   loading = true;

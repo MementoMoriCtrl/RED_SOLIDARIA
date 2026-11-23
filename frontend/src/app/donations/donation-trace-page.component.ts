@@ -7,11 +7,12 @@ import { finalize } from 'rxjs';
 import { DonationTrace } from './donation-trace.model';
 import { DonationTraceService } from './donation-trace.service';
 import { AppShellComponent } from '../shared/app-shell.component';
+import { DonationCustodyComponent } from './donation-custody.component';
 
 @Component({
   selector: 'app-donation-trace-page',
   standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, RouterLink, AppShellComponent],
+  imports: [FormsModule, DatePipe, DecimalPipe, RouterLink, AppShellComponent, DonationCustodyComponent],
   templateUrl: './donation-trace-page.component.html',
 })
 export class DonationTracePageComponent {

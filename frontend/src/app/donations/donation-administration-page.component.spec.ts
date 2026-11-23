@@ -3,7 +3,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { basicAuthInterceptor } from '../auth/basic-auth.interceptor';
+import { sessionInterceptor } from '../auth/session.interceptor';
 import { routes } from '../app.routes';
 import { DonationAdministrationPageComponent } from './donation-administration-page.component';
 
@@ -14,7 +14,7 @@ describe('DonationAdministrationPageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DonationAdministrationPageComponent],
-      providers: [provideRouter(routes), provideHttpClient(withInterceptors([basicAuthInterceptor])), provideHttpClientTesting()],
+      providers: [provideRouter(routes), provideHttpClient(withInterceptors([sessionInterceptor])), provideHttpClientTesting()],
     }).compileComponents();
     fixture = TestBed.createComponent(DonationAdministrationPageComponent);
     http = TestBed.inject(HttpTestingController);
@@ -60,5 +60,16 @@ describe('DonationAdministrationPageComponent', () => {
     expect(fixture.componentInstance.loading).toBe(false);
     expect(fixture.nativeElement.textContent).not.toContain('Cargando donaciones');
     expect(fixture.nativeElement.textContent).toContain('No se pudo cargar el listado');
+  });
+
+  it('sends date filters and blocks a reversed range', async () => {
+    http.expectOne('/api/donaciones/administracion/listado').flush([]);
+    await fixture.whenStable();
+    fixture.componentInstance.fechaDesde = '2026-01-01'; fixture.componentInstance.fechaHasta = '2026-01-31';
+    fixture.componentInstance.load();
+    http.expectOne(request => request.url === '/api/donaciones/administracion/listado'
+      && request.params.get('fechaDesde') === '2026-01-01' && request.params.get('fechaHasta') === '2026-01-31').flush([]);
+    fixture.componentInstance.fechaDesde = '2026-02-01'; fixture.componentInstance.load();
+    expect(fixture.componentInstance.error).toContain('fecha inicial');
   });
 });

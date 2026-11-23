@@ -4,21 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import java.math.BigDecimal;
-import java.sql.Statement;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import pe.redsolidaria.modules.audit.domain.AuditRecord;
@@ -28,52 +20,17 @@ import pe.redsolidaria.modules.donations.application.DonationReceiptService;
 import pe.redsolidaria.modules.deliveries.api.dto.DeliveryDtos.SaveDeliveryRequest;
 import pe.redsolidaria.modules.deliveries.application.DeliveryManagementService;
 import pe.redsolidaria.modules.emergencies.persistence.EmergencyBalanceRepository;
-import pe.redsolidaria.test.ControlledTestMySqlCondition;
 
-@SpringBootTest(properties = {"spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=validate"})
-@ExtendWith(ControlledTestMySqlCondition.class)
-@org.springframework.security.test.context.support.WithMockUser(authorities="ACCESO_ADMINISTRAR")
-class PhaseOneControlledMySqlIntegrationTest {
-    @DynamicPropertySource static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("TEST_DB_URL"));
-        registry.add("spring.datasource.username", () -> System.getenv("TEST_DB_USERNAME"));
-        registry.add("spring.datasource.password", () -> System.getenv("TEST_DB_PASSWORD"));
-    }
-    @Autowired JdbcTemplate jdbc;
-    @Autowired PlatformTransactionManager tx;
+@SpringBootTest(properties = {"spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=validate", "spring.sql.init.mode=never"})
+class PhaseOneControlledMySqlIntegrationTest extends ControlledDonationMySqlSupport {
     @Autowired DonationReceiptService receipts;
     @Autowired DeliveryManagementService deliveries;
     @Autowired EmergencyBalanceRepository balances;
     @Autowired pe.redsolidaria.modules.logistics.LogisticsService logistics;
     @MockitoSpyBean AuditRecordRepository audit;
-    long donationId, lineId, resourceId, emergencyId, need1, need2, distributionId;
-    String email;
+    @Autowired pe.redsolidaria.modules.logistics.LogisticsRepository transferIds;
 
-    @BeforeEach void fixturesInDedicatedDatabaseOnly() {
-        assertEquals("red_solidaria_test", jdbc.queryForObject("select database()", String.class));
-        assertEquals(4L, jdbc.queryForObject("select count(*) from flyway_schema_history where version in ('1','2','3','4') and success = 1", Long.class));
-        new TransactionTemplate(tx).executeWithoutResult(status -> {
-            String token = UUID.randomUUID().toString();
-            email = token + "@integration.test";
-            long role = insert("insert into rol(codigo,nombre) values (?,?)", "IT-" + token, "Integration fixture");
-            long actor = insert("insert into usuario(id_rol,nombre,apellido,correo,password_hash,estado) values (?,?,?,?,?,?)",
-                    role, "Integration", "Fixture", email, "unused-no-login", "ACTIVO");
-            long registrar=insert("insert into usuario(id_rol,nombre,apellido,correo,password_hash,estado) values (?,?,?,?,?,?)",
-                    role,"Registrador","Fixture",token+"-registrar@integration.test","unused-no-login","ACTIVO");
-            long donor = insert("insert into donante(nombre) values (?)", "IT-" + token);
-            long unit = insert("insert into unidad_medida(codigo,nombre) values (?,?)", token.substring(0, 30), "Integration unit");
-            resourceId = insert("insert into recurso(id_unidad_medida,nombre,categoria,estado) values (?,?,?,?)", unit, "IT-" + token, "IT", "ACTIVO");
-            emergencyId = insert("insert into emergencia(nombre,tipo,fecha_inicio,estado) values (?,?,?,?)", "IT-" + token, "TEST", java.sql.Date.valueOf("2026-01-01"), "ACTIVA");
-            long zone = insert("insert into zona_afectada(id_emergencia,nombre) values (?,?)", emergencyId, "Integration zone");
-            long collectionId = insert("insert into centro_acopio(nombre) values (?)", "IT-acopio-" + token);
-            distributionId = insert("insert into centro_distribucion(nombre) values (?)", "IT-distribucion-" + token);
-            donationId = insert("insert into donacion(id_donante,id_emergencia,id_centro_acopio,id_usuario_registro,codigo_trazabilidad,estado) values (?,?,?,?,?,?)",
-                    donor, emergencyId, collectionId, registrar, "IT-" + token, "REGISTRADA");
-            lineId = insert("insert into detalle_donacion(id_donacion,id_recurso,cantidad_donada) values (?,?,?)", donationId, resourceId, new BigDecimal("10.000"));
-            need1 = insert("insert into necesidad(id_zona_afectada,id_recurso,cantidad_requerida,prioridad,estado) values (?,?,?,?,?)", zone, resourceId, 8, "ALTA", "PENDIENTE");
-            need2 = insert("insert into necesidad(id_zona_afectada,id_recurso,cantidad_requerida,prioridad,estado) values (?,?,?,?,?)", zone, resourceId, 8, "ALTA", "PENDIENTE");
-        });
-    }
+    @Override protected void observeJdbcRepositories() { fixtureAudit.observeTransferIds(transferIds); }
     RegisterReceiptRequest receipt(String quantity) {
         return new RegisterReceiptRequest(List.of(new ReceiptLineRequest(resourceId, new BigDecimal(quantity))), null, null);
     }
@@ -120,7 +77,9 @@ class PhaseOneControlledMySqlIntegrationTest {
         assertEquals(0, balance.faltanteAbastecimiento().compareTo(new BigDecimal("6")));
     }
     @Test void logisticsRetriesAndPartialDeliveryForA100KgNeed() throws Exception {
-        jdbc.update("update necesidad set cantidad_requerida=100 where id_necesidad=?",need1);
+        // Keep the existing fixture-only update, but make its outcome observable by the safety ledger.
+        new TransactionTemplate(tx).executeWithoutResult(status ->
+            jdbc.update("update necesidad set cantidad_requerida=100 where id_necesidad=?",need1));
         receipts.register(donationId,email,receipt("10"));
         var sent=new pe.redsolidaria.modules.logistics.LogisticsDtos.Dispatch(UUID.randomUUID(),lineId,distributionId,new BigDecimal("10"),"Lote de arroz");
         parallel(() -> logistics.dispatch(sent,email),() -> logistics.dispatch(sent,email));
@@ -183,27 +142,5 @@ class PhaseOneControlledMySqlIntegrationTest {
     String allocate(long need) {
         try { deliveries.save(need, lineId, email, new SaveDeliveryRequest(new BigDecimal("8"), BigDecimal.ZERO)); return "OK"; }
         catch (ResponseStatusException failure) { return String.valueOf(failure.getStatusCode().value()); }
-    }
-    BigDecimal received() { return jdbc.queryForObject("select cantidad_recibida_acopio from detalle_donacion where id_detalle_donacion = ?", BigDecimal.class, lineId); }
-    long operationCount() { return jdbc.queryForObject("select count(*) from recepcion_operacion where id_donacion = ?", Long.class, donationId); }
-    long insert(String sql, Object... args) {
-        var key = new GeneratedKeyHolder();
-        jdbc.update(connection -> {
-            var statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            for (int i = 0; i < args.length; i++) statement.setObject(i + 1, args[i]);
-            return statement;
-        }, key);
-        return key.getKey().longValue();
-    }
-    List<Object> parallel(Callable<?> first, Callable<?> second) throws Exception {
-        try (var pool = Executors.newFixedThreadPool(2)) {
-            var ready = new CountDownLatch(2); var start = new CountDownLatch(1);
-            var futures = List.of(first, second).stream().map(task -> pool.submit(() -> {
-                ready.countDown(); if (!start.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("Start timeout");
-                return (Object) task.call();
-            })).toList();
-            assertTrue(ready.await(5, TimeUnit.SECONDS)); start.countDown();
-            return List.of(futures.get(0).get(15, TimeUnit.SECONDS), futures.get(1).get(15, TimeUnit.SECONDS));
-        }
     }
 }

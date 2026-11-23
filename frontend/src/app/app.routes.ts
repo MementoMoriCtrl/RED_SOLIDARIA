@@ -2,6 +2,12 @@ import { Routes } from '@angular/router';
 import { administratorGuard, authenticatedGuard, donationRegistrationGuard } from './auth/auth.guards';
 
 export const routes: Routes = [
+  { path: 'admin/reportes', canActivate: [administratorGuard],
+    loadComponent: () => import('./reports/reports-page.component').then(module => module.ReportsPageComponent) },
+  { path: 'admin/roles', canActivate: [administratorGuard],
+    loadComponent: () => import('./admin/role-management-page.component').then(module => module.RoleManagementPageComponent) },
+  { path: 'admin/usuarios', canActivate: [administratorGuard],
+    loadComponent: () => import('./admin/user-management-page.component').then(module => module.UserManagementPageComponent) },
   { path: 'admin/logistica', canActivate: [administratorGuard],
     loadComponent: () => import('./logistics/logistics-page.component').then(module => module.LogisticsPageComponent) },
   {

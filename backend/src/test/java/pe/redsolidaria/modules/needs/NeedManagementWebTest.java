@@ -1,7 +1,7 @@
 package pe.redsolidaria.modules.needs;
 
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static pe.redsolidaria.test.SessionWebTestUsers.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import java.util.List;
@@ -32,7 +32,7 @@ class NeedManagementWebTest {
     @BeforeEach void clearCalls() { clearInvocations(needs, deliveries); }
 
     @Test void protectsReadsAndWritesFromAnonymousAndNonAdministrators() throws Exception {
-        for (var request : List.of(get(ZONE), post(ZONE), get("/api/admin/necesidades/3/donaciones"), put(DELIVERY))) {
+        for (var request : List.of(get(ZONE), post(ZONE), put(ZONE + "/3"), post(ZONE + "/3/cerrar"), post(ZONE + "/3/cancelar"), get("/api/admin/necesidades/3/donaciones"), put(DELIVERY))) {
             mvc.perform(request.contentType("application/json").content("{}" )).andExpect(status().isUnauthorized());
             mvc.perform(request.with(user("operator").authorities(() -> "DONACION_REGISTRAR")))
                     .andExpect(status().isForbidden());
@@ -48,6 +48,16 @@ class NeedManagementWebTest {
                 .contentType("application/json").content("{\"recursoId\":5,\"cantidad\":2.5,\"prioridad\":\"ALTA\"}"))
                 .andExpect(status().isCreated());
         verify(needs).create(eq(1L), eq(2L), eq("admin"), any());
+        mvc.perform(put(ZONE + "/3").with(user("admin").authorities(() -> "ACCESO_ADMINISTRAR"))
+                .contentType("application/json").content("{\"cantidad\":2.5,\"prioridad\":\"ALTA\"}"))
+                .andExpect(status().isOk());
+        verify(needs).update(eq(1L), eq(2L), eq(3L), eq("admin"), any());
+        for (String action : List.of("cerrar", "cancelar")) {
+            mvc.perform(post(ZONE + "/3/" + action).with(user("admin").authorities(() -> "ACCESO_ADMINISTRAR"))
+                    .contentType("application/json").content("{\"motivo\":\"Justificación\"}"))
+                    .andExpect(status().isOk());
+        }
+        verify(needs, times(2)).transition(eq(1L), eq(2L), eq(3L), eq("admin"), anyString(), any());
         mvc.perform(put(DELIVERY).with(user("admin").authorities(() -> "ACCESO_ADMINISTRAR"))
                 .contentType("application/json").content("{\"totalAsignado\":2.5,\"totalEntregado\":1}"))
                 .andExpect(status().isOk());

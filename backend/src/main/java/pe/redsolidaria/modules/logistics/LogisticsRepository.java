@@ -40,6 +40,32 @@ public class LogisticsRepository {
     public Optional<Transfer> transfer(String id) {
         return jdbc.sql(TRANSFER + " WHERE t.operacion_id=:id").param("id",id).query(Transfer.class).optional();
     }
+    public Optional<Transfer> transferForUpdate(String id) {
+        // Lock only the transfer row; do not lock or alter stock or donation records.
+        var locked=jdbc.sql("SELECT operacion_id FROM traslado_recurso WHERE operacion_id=:id FOR UPDATE")
+            .param("id",id).query(String.class).optional();
+        return locked.isEmpty() ? Optional.empty() : transfer(id);
+    }
+    public void insertResolution(ResolutionDtos.Resolution resolution) {
+        jdbc.sql("""
+            INSERT INTO resolucion_traslado(operacion_id,traslado_id,id_usuario,fecha_resolucion,tipo,motivo,evidencia,
+                cantidad_enviada,cantidad_recibida,diferencia)
+            VALUES (:operation,:transfer,:actor,:date,:type,:reason,:evidence,:sent,:received,:difference)
+            """).param("operation",resolution.operacionId()).param("transfer",resolution.trasladoId())
+            .param("actor",resolution.actorId()).param("date",resolution.fecha()).param("type",resolution.tipo())
+            .param("reason",resolution.motivo()).param("evidence",resolution.evidencia())
+            .param("sent",resolution.cantidadEnviada()).param("received",resolution.cantidadRecibida())
+            .param("difference",resolution.diferencia()).update();
+    }
+    public List<ResolutionDtos.Resolution> resolutions(int page) {
+        return jdbc.sql("""
+            SELECT r.operacion_id operacionId,r.traslado_id trasladoId,r.id_usuario actorId,r.fecha_resolucion fecha,
+              r.tipo,r.motivo,r.evidencia,r.cantidad_enviada cantidadEnviada,r.cantidad_recibida cantidadRecibida,r.diferencia
+            FROM resolucion_traslado r JOIN (
+              SELECT operacion_id FROM traslado_recurso ORDER BY fecha_salida DESC,operacion_id LIMIT 20 OFFSET :offset
+            ) t ON t.operacion_id=r.traslado_id
+            """).param("offset",page * 20L).query(ResolutionDtos.Resolution.class).list();
+    }
     public List<Transfer> history(int page) {
         return jdbc.sql(TRANSFER + " ORDER BY t.fecha_salida DESC,t.operacion_id LIMIT 20 OFFSET :offset")
             .param("offset",page * 20L).query(Transfer.class).list();
@@ -85,14 +111,19 @@ public class LogisticsRepository {
             GREATEST(0,l.cantidad_recibida_acopio-COALESCE(t.enviada,0)-COALESCE(e.historica,0)) disponibleAcopio,
             GREATEST(0,COALESCE(t.recibida,0)-COALESCE(e.nueva,0)) disponibleDistribucion,
             COALESCE(t.transito,0) enTransito,COALESCE(t.diferencia,0) diferencia,
-            COALESCE(e.historica,0) reservaHistoricaSinDistribucion
+            COALESCE(e.historica,0) reservaHistoricaSinDistribucion,
+            l.cantidad_recibida_acopio-COALESCE(t.enviada,0)-COALESCE(e.historica,0) saldoBrutoAcopio,
+            COALESCE(t.recibida,0)-COALESCE(e.nueva,0) saldoBrutoDistribucion,
+            t.centroDistribucion centroDistribucion
             FROM detalle_donacion l JOIN donacion d ON d.id_donacion=l.id_donacion
             JOIN recurso r ON r.id_recurso=l.id_recurso JOIN unidad_medida u ON u.id_unidad_medida=r.id_unidad_medida
             LEFT JOIN centro_acopio c ON c.id_centro_acopio=d.id_centro_acopio
-            LEFT JOIN (SELECT id_detalle_donacion,SUM(cantidad_enviada) enviada,SUM(cantidad_recibida) recibida,
-              SUM(CASE WHEN estado='EN_TRANSITO' THEN cantidad_enviada ELSE 0 END) transito,
-              SUM(CASE WHEN estado<>'EN_TRANSITO' THEN cantidad_enviada-cantidad_recibida ELSE 0 END) diferencia
-              FROM traslado_recurso GROUP BY id_detalle_donacion) t ON t.id_detalle_donacion=l.id_detalle_donacion
+            LEFT JOIN (SELECT tr.id_detalle_donacion,SUM(tr.cantidad_enviada) enviada,SUM(tr.cantidad_recibida) recibida,
+              SUM(CASE WHEN tr.estado='EN_TRANSITO' THEN tr.cantidad_enviada ELSE 0 END) transito,
+              SUM(CASE WHEN tr.estado<>'EN_TRANSITO' THEN tr.cantidad_enviada-tr.cantidad_recibida ELSE 0 END) diferencia,
+              CASE WHEN COUNT(DISTINCT tr.id_centro_distribucion)=1 THEN MAX(cd.nombre) ELSE NULL END centroDistribucion
+              FROM traslado_recurso tr JOIN centro_distribucion cd ON cd.id_centro_distribucion=tr.id_centro_distribucion
+              GROUP BY tr.id_detalle_donacion) t ON t.id_detalle_donacion=l.id_detalle_donacion
             LEFT JOIN (SELECT id_detalle_donacion,SUM(cantidad_asignada) asignada,
               SUM(CASE WHEN origen_distribucion=0 THEN cantidad_asignada ELSE 0 END) historica,
               SUM(CASE WHEN origen_distribucion=1 THEN cantidad_asignada ELSE 0 END) nueva

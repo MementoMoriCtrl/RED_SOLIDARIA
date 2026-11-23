@@ -1,7 +1,7 @@
 package pe.redsolidaria.modules.donations;
 
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static pe.redsolidaria.test.SessionWebTestUsers.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import java.util.List;
@@ -52,6 +52,32 @@ class DonationCatalogWebTest {
                 .contentType("application/json").content("{\"nombre\":\"Litro\",\"codigo\":\"L\"}"))
                 .andExpect(status().isCreated());
         verify(catalogs).createUnit(eq("admin"), any());
+    }
+    @Test void protectsAndValidatesCatalogEditing() throws Exception {
+        for (String kind : List.of("donantes", "centros")) {
+            String path = "/api/admin/catalogos-donaciones/" + kind + "/1";
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+            mvc.perform(put(path).with(user("registrar").authorities(() -> "DONACION_REGISTRAR"))
+                    .contentType("application/json").content("{\"nombre\":\"X\"}")).andExpect(status().isForbidden());
+            mvc.perform(put(path).with(user("admin").authorities(() -> "ACCESO_ADMINISTRAR"))
+                    .contentType("application/json").content("{\"nombre\":\" \"}")).andExpect(status().isBadRequest());
+            mvc.perform(put(path).with(user("admin").authorities(() -> "ACCESO_ADMINISTRAR"))
+                    .contentType("application/json").content("{\"nombre\":\"X\"}")).andExpect(status().isOk());
+            verify(catalogs).update(eq(kind), eq(1L), eq("admin"), any());
+        }
+    }
+    @Test void protectsAndValidatesUnitEditing() throws Exception {
+        String path = "/api/admin/catalogos-donaciones/unidades/1";
+        mvc.perform(put(path).contentType("application/json").content("{\"nombre\":\"Litro\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(put(path).with(user("registrar").authorities(() -> "DONACION_REGISTRAR"))
+                .contentType("application/json").content("{\"nombre\":\"Litro\"}")).andExpect(status().isForbidden());
+        mvc.perform(put(path).with(user("admin").authorities(() -> "ACCESO_ADMINISTRAR"))
+                .contentType("application/json").content("{\"nombre\":\" \"}")).andExpect(status().isBadRequest());
+        mvc.perform(put(path).with(user("admin").authorities(() -> "ACCESO_ADMINISTRAR"))
+                .contentType("application/json").content("{\"nombre\":\"Litro\",\"simbolo\":\"l\"}"))
+                .andExpect(status().isOk());
+        verify(catalogs).updateUnit(eq(1L), eq("admin"), any());
     }
     @Test void protectsEmergencyBalancesAndReturnsNotFoundForUnknownEmergency() throws Exception {
         mvc.perform(get("/api/admin/emergencias/1/balance").with(user("registrar").authorities(() -> "DONACION_REGISTRAR")))

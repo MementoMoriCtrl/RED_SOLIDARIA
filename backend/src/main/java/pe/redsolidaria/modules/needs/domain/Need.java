@@ -32,4 +32,8 @@ public class Need {
     public String getPrioridad() { return prioridad; }
     public String getEstado() { return estado; }
     public String getObservaciones() { return observaciones; }
+    public void cambiarEstado(String estado) { this.estado = estado; }
+    public void actualizar(BigDecimal cantidad, String prioridad, String observaciones) {
+        this.cantidadRequerida = cantidad; this.prioridad = prioridad; this.observaciones = observaciones;
+    }
 }

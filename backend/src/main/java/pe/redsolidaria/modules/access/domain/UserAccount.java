@@ -2,6 +2,8 @@ package pe.redsolidaria.modules.access.domain;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "usuario")
@@ -25,6 +27,7 @@ public class UserAccount {
         this.rol = rol; this.nombre = nombre; this.apellido = apellido; this.correo = correo; this.passwordHash = passwordHash; this.estado = estado;
     }
     // Nullable singleton: only the controlled migration can grant this account capability.
+    @JdbcTypeCode(SqlTypes.TINYINT)
     @Column(name = "admin_maestro", insertable = false, updatable = false)
     private Boolean adminMaestro;
     public static final String MASTER_PERMISSION = "ADMIN_MAESTRO";
@@ -36,10 +39,14 @@ public class UserAccount {
         return java.util.Set.copyOf(codes);
     }
     public boolean esAdministradorMaestro() {
-        return Boolean.TRUE.equals(adminMaestro) && "ACTIVO".equalsIgnoreCase(estado)
-                && rol.getAsignaciones().stream().anyMatch(a -> "ACCESO_ADMINISTRAR".equals(a.getPermiso().getCodigo()));
+        return tieneMarcaAdministradorMaestro() && "ACTIVO".equalsIgnoreCase(estado)
+                && rol.getAsignaciones().stream().anyMatch(a -> "ACCESO_ADMINISTRAR".equals(a.getPermiso().getCodigo()))
+                && rol.getAsignaciones().stream().anyMatch(a -> "DONACION_REGISTRAR".equals(a.getPermiso().getCodigo()));
     }
+    // Identifies the protected account even when inactive or missing effective permissions.
+    public boolean tieneMarcaAdministradorMaestro() { return Boolean.TRUE.equals(adminMaestro); }
     public void cambiarEstado(String estado) { this.estado = estado; }
+    public void actualizarDatos(String nombre, String apellido, String correo) { this.nombre = nombre; this.apellido = apellido; this.correo = correo; }
     public void cambiarRol(Role rol) { this.rol = rol; }
     public Long getId() { return id; }
     public Role getRol() { return rol; }

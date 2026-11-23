@@ -1,4 +1,5 @@
 export interface DonationTrace {
+  trazabilidad?: import('./donation-custody.model').PublicCustody | null;
   codigoTrazabilidad: string;
   fechaRegistro: string;
   fechaIngreso: string | null;
@@ -23,6 +24,13 @@ export interface DonationDetail {
 }
 
 export interface DonationMovement {
+  recurso?: string | null;
+  unidad?: string | null;
+  cantidadEnviada?: number | null;
+  cantidadRecibida?: number | null;
+  origen?: import('./donation-custody.model').CustodyPlace | null;
+  destino?: import('./donation-custody.model').CustodyPlace | null;
+  zona?: string | null;
   descripcion?: string;
   estadoAnterior: string | null;
   estadoNuevo: string;

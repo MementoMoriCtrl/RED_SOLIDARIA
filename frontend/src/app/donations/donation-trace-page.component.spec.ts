@@ -102,4 +102,27 @@ describe('DonationTracePageComponent', () => {
     expect(link.textContent).toContain('Acceso para organizaciones');
     expect(link.getAttribute('href')).toBe('/acceso-organizaciones');
   });
+  it('renders institutional evidence and marks collection receipt confirmed without using global state', async () => {
+    fixture.componentInstance.codigo = 'RS-RECEIVED';
+    fixture.componentInstance.consultar();
+    const place = { tipo: 'ACOPIO', nombre: 'Centro de Acopio Prueba 2', direccionInstitucional: 'Dirección institucional acopio' };
+    http.expectOne('/api/donaciones/RS-RECEIVED').flush({
+      codigoTrazabilidad: 'RS-RECEIVED', fechaRegistro: '2026-11-12T10:00:00', fechaIngreso: null,
+      estado: 'REGISTRADA', centroAcopio: { nombre: place.nombre, ubicacion: place.direccionInstitucional }, detalles: [],
+      trazabilidad: { presentacion: 'Dirección exacta protegida por privacidad', emergencia: null,
+        recepcionAcopioConfirmada: true, recursos: [{ recurso: 'Arroz', unidad: 'KG', estadoLogistico: 'EN_ACOPIO',
+          ultimaCustodiaConfirmada: place, ultimaConfirmacion: '2026-11-12T11:00:00', ultimaActualizacion: '2026-11-12T11:00:00',
+          posiciones: [{ estado: 'EN_ACOPIO', centro: place, zona: null, cantidad: 10 }], movimientos: [], aclaracion: 'Sin GPS' }] },
+      movimientos: [{ descripcion: 'Recepción confirmada en centro de acopio', estadoAnterior: null, estadoNuevo: 'RECIBIDA',
+        fechaHora: '2026-11-12T11:00:00', ubicacion: place.nombre, destino: place, recurso: 'Arroz', unidad: 'KG', cantidadRecibida: 10 }],
+    });
+    await fixture.whenStable();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Recepción física confirmada en acopio');
+    expect(text).toContain(place.nombre);
+    expect(text).toContain(place.direccionInstitucional);
+    expect(text).not.toContain('pendiente de confirmación documental');
+    expect(text).not.toContain('No indicada');
+    expect(text).not.toContain('Información de custodia no disponible');
+  });
 });

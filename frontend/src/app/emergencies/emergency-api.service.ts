@@ -8,10 +8,12 @@ export class EmergencyApiService {
   private readonly http = inject(HttpClient);
   private readonly endpoint = '/api/admin/emergencias';
 
-  list(text = '', state = '', page = 0, size = 20): Observable<EmergencyPage> {
+  list(text = '', state = '', page = 0, size = 20, from = '', to = ''): Observable<EmergencyPage> {
     let params = new HttpParams().set('page', page).set('size', size);
     if (text.trim()) params = params.set('texto', text.trim());
     if (state.trim()) params = params.set('estado', state.trim());
+    if (from) params = params.set('fechaDesde', from);
+    if (to) params = params.set('fechaHasta', to);
     return this.http.get<EmergencyPage>(this.endpoint, { params });
   }
   findById(id: number): Observable<EmergencyDetail> { return this.http.get<EmergencyDetail>(`${this.endpoint}/${id}`); }

@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BasicAuthService } from '../auth/basic-auth.service';
+import { SessionAuthService } from '../auth/session-auth.service';
 import { DonationRegistrationPageComponent } from './donation-registration-page.component';
 
 describe('DonationRegistrationPageComponent', () => {
@@ -14,8 +14,7 @@ describe('DonationRegistrationPageComponent', () => {
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         { provide: ActivatedRoute, useValue: { snapshot: { data: { donationPage: 'registration' } } } }],
     }).compileComponents();
-    const auth = TestBed.inject(BasicAuthService);
-    auth.provideCredentials('fixture', 'in-memory');
+    const auth = TestBed.inject(SessionAuthService);
     auth.markAuthenticated({ nombre: 'Fixture', apellido: 'Test', correo: 'fixture@test', rolCodigo: 'TEST', rolNombre: 'Test',
       permisos: ['DONACION_REGISTRAR', 'ACCESO_ADMINISTRAR'] });
     fixture = TestBed.createComponent(DonationRegistrationPageComponent);
@@ -44,6 +43,35 @@ describe('DonationRegistrationPageComponent', () => {
     fixture.nativeElement.querySelector(`#tab-${tab}`).click();
     await fixture.whenStable();
   }
+  it('edits the unit name and symbol without sending its code', async () => {
+    await openAdmin(); await clickTab('unidades');
+    const component = fixture.componentInstance;
+    component.editUnit(component.units[0]);
+    component.editUnitName = ' '; component.saveUnitEdit();
+    http.expectNone(request => request.method === 'PUT');
+    component.editUnitName = 'Kilo'; component.editUnitSymbol = 'k'; component.saveUnitEdit();
+    const request = http.expectOne('/api/admin/catalogos-donaciones/unidades/1');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ nombre: 'Kilo', simbolo: 'k' });
+    request.flush({ id: 1, codigo: 'KG', nombre: 'Kilo', simbolo: 'k' });
+    await fixture.whenStable();
+    expect(component.units[0].codigo).toBe('KG'); expect(component.units[0].nombre).toBe('Kilo');
+  });
+  it('loads the center description and edits the existing record', async () => {
+    await openAdmin(); await clickTab('centros');
+    const component = fixture.componentInstance;
+    component.editCatalog(component.catalogs.centros.content[0]);
+    http.expectOne('/api/admin/catalogos-donaciones/centros/2')
+      .flush({ id: 2, nombre: 'Centro inicial', ubicacion: 'Lima', descripcion: 'Descripción original' });
+    expect(component.editDescription).toBe('Descripción original');
+    component.editName = 'Centro actualizado'; component.saveCatalogEdit();
+    const request = http.expectOne('/api/admin/catalogos-donaciones/centros/2');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ nombre: 'Centro actualizado', ubicacion: 'Lima', descripcion: 'Descripción original' });
+    request.flush({ id: 2, nombre: 'Centro actualizado', ubicacion: 'Lima', descripcion: 'Descripción original' });
+    await fixture.whenStable();
+    expect(component.catalogs.centros.content[0].nombre).toBe('Centro actualizado');
+  });
   function enter(selector: string, value: string): void {
     const input = fixture.nativeElement.querySelector(selector);
     input.value = value; input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -64,6 +92,29 @@ describe('DonationRegistrationPageComponent', () => {
     await fixture.whenStable();
     expect(component.saving).toBe(false);
     expect(fixture.nativeElement.textContent).toContain('pendiente de verificación');
+  });
+  it.each(['', 'Jr. Los Laureles 245, Castilla, Piura'])('keeps the presentation address optional and sends ubicacion unchanged: %s', async (address) => {
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input[name="location"]');
+    expect(input.closest('label')?.textContent).toContain('Lugar de presentación / punto de recogida');
+    expect(input.placeholder).toBe('Ej.: Jr. Los Laureles 245, Castilla, Piura');
+    expect(input.required).toBe(false);
+    expect(fixture.nativeElement.querySelector('#donation-location-help').textContent).toBe(
+      'Indique la dirección donde se recibió o recogió físicamente la donación: domicilio del donante, instalaciones de una empresa o punto de colecta. Campo opcional.');
+    enter('input[name="location"]', address);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+    expect(component.location).toBe(address);
+    component.donorId = 1; component.emergencyId = 1;
+    component.lines = [{ recursoId: 3, cantidad: 2.5 }];
+    component.register();
+    const request = http.expectOne('/api/donaciones');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ donanteId: 1, emergenciaId: 1, centroAcopioId: null,
+      ubicacion: address, observaciones: '', detalles: [{ recursoId: 3, cantidad: 2.5 }] });
+    request.flush({ id: 5, codigoTrazabilidad: 'RS-FIXTURE' });
+    await fixture.whenStable();
+    expect(component.created?.id).toBe(5);
+    expect(component.location).toBe(address);
   });
   it('loads another catalog page without dropping previous choices', async () => {
     fixture.componentInstance.search('donantes', true);
@@ -149,7 +200,7 @@ describe('DonationRegistrationPageComponent', () => {
     http.expectOne('/api/unidades-medida').flush([]);
   });
   it('hides administrative actions and blocks catalog writes without the administrative permission', () => {
-    TestBed.inject(BasicAuthService).markAuthenticated({ nombre: 'Org', apellido: 'Test', correo: 'org@test',
+    TestBed.inject(SessionAuthService).markAuthenticated({ nombre: 'Org', apellido: 'Test', correo: 'org@test',
       rolCodigo: 'TEST', rolNombre: 'Test', permisos: ['DONACION_REGISTRAR'] });
     TestBed.inject(ActivatedRoute).snapshot.data['donationPage'] = 'catalogs';
     fixture.changeDetectorRef.markForCheck();
@@ -162,7 +213,7 @@ describe('DonationRegistrationPageComponent', () => {
     http.expectNone(request => request.method === 'POST');
   });
   it('preserves center creation for administrators without registration permission', async () => {
-    TestBed.inject(BasicAuthService).markAuthenticated({ nombre: 'Admin', apellido: 'Test', correo: 'admin@test',
+    TestBed.inject(SessionAuthService).markAuthenticated({ nombre: 'Admin', apellido: 'Test', correo: 'admin@test',
       rolCodigo: 'TEST', rolNombre: 'Test', permisos: ['ACCESO_ADMINISTRAR'] });
     TestBed.inject(ActivatedRoute).snapshot.data['donationPage'] = 'catalogs';
     fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();
@@ -248,7 +299,7 @@ describe('DonationRegistrationPageComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.donation-resource-row').length).toBe(2);
   });
   it('only exposes catalog and emergency management helpers to authorized administrators', async () => {
-    TestBed.inject(BasicAuthService).markAuthenticated({ nombre: 'Org', apellido: 'Test', correo: 'org@test',
+    TestBed.inject(SessionAuthService).markAuthenticated({ nombre: 'Org', apellido: 'Test', correo: 'org@test',
       rolCodigo: 'TEST', rolNombre: 'Test', permisos: ['DONACION_REGISTRAR'] });
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('.donation-selector a')).toBeNull();

@@ -24,6 +24,7 @@ export class EmergencyManagementPageComponent implements OnInit {
   loading = true; loadingDetail = false; saving = false;
   error: string | null = null; success: string | null = null;
   text = ''; stateFilter = '';
+  filterFrom = ''; filterTo = '';
   formOpen = false; editingId: number | null = null;
   name = ''; type = ''; description = ''; startDate = ''; endDate = ''; createState = '';
   nextState = ''; zoneId: number | null = null; zoneName = ''; zoneLocation = ''; zoneDescription = '';
@@ -31,8 +32,11 @@ export class EmergencyManagementPageComponent implements OnInit {
   ngOnInit(): void { this.load(); }
 
   load(page = 0): void {
+    if (this.filterFrom && this.filterTo && this.filterFrom > this.filterTo) {
+      this.error = 'La fecha inicial no puede ser posterior a la final.'; this.loading = false; return;
+    }
     this.loading = true; this.error = null;
-    this.api.list(this.text, this.stateFilter, page).pipe(finalize(() => {
+    this.api.list(this.text, this.stateFilter, page, 20, this.filterFrom, this.filterTo).pipe(finalize(() => {
       this.loading = false; this.changeDetector.markForCheck();
     })).subscribe({
       next: (result) => { this.emergencies = result.content; this.page = result.page;

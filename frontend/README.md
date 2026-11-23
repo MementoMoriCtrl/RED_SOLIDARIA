@@ -16,7 +16,7 @@ Once the server is running, open your browser and navigate to `http://localhost:
 
 La ruta `/trazabilidad` permite consultar una donación por su código sin iniciar sesión. Durante `ng serve`, las peticiones a `/api/**` se reenvían a `http://localhost:8080` mediante `proxy.conf.json`, por lo que el navegador conserva el mismo origen y no necesita CORS para desarrollo local.
 
-La ruta pública es `GET /api/donaciones/{codigoTrazabilidad}`. Su DTO omite datos personales y campos internos. `/acceso-organizaciones` valida HTTP Basic mediante `GET /api/auth/validate`, que requiere una cuenta activa pero no un permiso funcional. Las credenciales se mantienen solo en memoria. El interceptor excluye la consulta pública y solo añade HTTP Basic a solicitudes privadas al servidor local; nunca envía credenciales a dominios externos.
+La ruta pública es `GET /api/donaciones/{codigoTrazabilidad}`. El acceso privado utiliza una sesión de servidor bajo el mismo origen. El frontend obtiene un token CSRF y lo envía en escrituras dirigidas a la API del mismo origen; la contraseña no se conserva después del login.
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:

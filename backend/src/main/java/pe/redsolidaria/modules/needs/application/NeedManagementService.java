@@ -5,12 +5,14 @@ import static pe.redsolidaria.modules.needs.api.dto.NeedDtos.*;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.web.server.ResponseStatusException;
 import pe.redsolidaria.modules.access.persistence.UserRepository;
 import pe.redsolidaria.modules.audit.domain.AuditRecord;
@@ -60,7 +62,7 @@ public class NeedManagementService {
                 || request.prioridad() == null || request.prioridad().isBlank() || request.prioridad().length() > 30)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa recurso, cantidad y prioridad");
         var zone = zone(emergencyId, zoneId);
-        var resource = resources.findById(request.recursoId()).orElseThrow(() -> missing("Recurso no encontrado"));
+        var resource = resources.findByIdForUpdate(request.recursoId()).orElseThrow(() -> missing("Recurso no encontrado"));
         if (!"ACTIVO".equals(resource.getEstado())) throw conflict("El recurso debe estar activo");
         if (request.observaciones() != null && request.observaciones().getBytes(StandardCharsets.UTF_8).length > 65535)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Las observaciones superan el límite permitido");
@@ -72,6 +74,64 @@ public class NeedManagementService {
                 json.writeValueAsString(Map.of("zonaId", zoneId, "recursoId", resource.getId(),
                         "cantidadRequerida", request.cantidad(), "prioridad", request.prioridad().trim()))));
         return response(need);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public NeedResponse update(long emergencyId, long zoneId, long needId, String email, UpdateNeedRequest request) {
+        if (request == null || request.cantidad() == null || request.cantidad().signum() <= 0
+                || request.cantidad().scale() > 3 || request.cantidad().precision() - request.cantidad().scale() > 11
+                || request.prioridad() == null || request.prioridad().isBlank() || request.prioridad().length() > 30
+                || (request.observaciones() != null && request.observaciones().getBytes(StandardCharsets.UTF_8).length > 65535))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa cantidad, prioridad y observaciones");
+        var need = needs.findByIdForUpdate(needId).orElseThrow(() -> missing("Necesidad no encontrada"));
+        if (!Long.valueOf(zoneId).equals(need.getZona().getId())
+                || !Long.valueOf(emergencyId).equals(need.getZona().getEmergencia().getId()))
+            throw missing("Necesidad no encontrada en la zona y emergencia");
+        if (!"PENDIENTE".equals(need.getEstado())) throw conflict("Solo se pueden editar necesidades pendientes");
+        if (request.cantidad().compareTo(lines.assignedToNeed(needId)) < 0)
+            throw conflict("La cantidad requerida no puede ser menor que la asignada");
+        var actor = users.findByCorreo(email.trim().toLowerCase(Locale.ROOT))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        var before = snapshot(need);
+        need.actualizar(request.cantidad(), request.prioridad().trim(),
+                request.observaciones() == null ? null : request.observaciones().trim());
+        needs.saveAndFlush(need);
+        audit.saveAndFlush(new AuditRecord(actor, "NECESIDAD", Long.toString(needId), "EDICION_NECESIDAD",
+                json.writeValueAsString(before), json.writeValueAsString(snapshot(need))));
+        return response(need);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public NeedResponse transition(long emergencyId, long zoneId, long needId, String email, String target, TransitionNeedRequest request) {
+        if (request == null || request.motivo() == null || request.motivo().isBlank() || request.motivo().length() > 1000
+                || !("CERRADA".equals(target) || "CANCELADA".equals(target)))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica un motivo válido");
+        var need = needs.findByIdForUpdate(needId).orElseThrow(() -> missing("Necesidad no encontrada"));
+        if (!Long.valueOf(zoneId).equals(need.getZona().getId())
+                || !Long.valueOf(emergencyId).equals(need.getZona().getEmergencia().getId()))
+            throw missing("Necesidad no encontrada en la zona y emergencia");
+        if (!"PENDIENTE".equals(need.getEstado())) throw conflict("La necesidad ya no está pendiente");
+        if ("CERRADA".equals(target) && lines.deliveredToNeed(needId).compareTo(need.getCantidadRequerida()) < 0)
+            throw conflict("La necesidad debe estar completamente entregada para cerrarse");
+        if ("CANCELADA".equals(target) && !lines.sourcesWithPendingReservations(needId).isEmpty())
+            throw conflict("Existen reservas pendientes de entregar");
+        var actor = users.findByCorreo(email.trim().toLowerCase(Locale.ROOT))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        String previous = need.getEstado();
+        need.cambiarEstado(target);
+        needs.saveAndFlush(need);
+        audit.saveAndFlush(new AuditRecord(actor, "NECESIDAD", Long.toString(needId), "TRANSICION_NECESIDAD",
+                json.writeValueAsString(Map.of("estado", previous)),
+                json.writeValueAsString(Map.of("estado", target, "motivo", request.motivo().trim()))));
+        return response(need);
+    }
+
+    private Map<String, Object> snapshot(Need need) {
+        var values = new LinkedHashMap<String, Object>();
+        values.put("cantidadRequerida", need.getCantidadRequerida());
+        values.put("prioridad", need.getPrioridad());
+        values.put("observaciones", need.getObservaciones());
+        return values;
     }
 
     public SourcePage sources(long needId, int page) {
@@ -95,7 +155,7 @@ public class NeedManagementService {
                 need.getRecurso().getNombre(), need.getRecurso().getUnidadMedida().getCodigo(), need.getPrioridad(),
                 need.getEstado(), need.getCantidadRequerida(), assigned, delivered,
                 need.getCantidadRequerida().subtract(assigned).max(BigDecimal.ZERO),
-                need.getCantidadRequerida().subtract(delivered).max(BigDecimal.ZERO));
+                need.getCantidadRequerida().subtract(delivered).max(BigDecimal.ZERO), need.getObservaciones());
     }
 
     private pe.redsolidaria.modules.emergencies.domain.AffectedZone zone(long emergencyId, long zoneId) {

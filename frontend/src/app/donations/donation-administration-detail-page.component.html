@@ -9,8 +9,37 @@
       <p class="eyebrow">DETALLE ADMINISTRATIVO</p>
       <h1 id="page-title">Donación {{ item.codigoTrazabilidad }}</h1>
       <p class="intro-copy">Registrada el {{ item.fechaRegistro | date:'dd/MM/yyyy HH:mm' }} · Estado: <strong>{{ item.estado }}</strong></p>
+        <p>RECIBIDA indica que terminó la verificación, incluso si hay diferencias respecto de lo declarado.</p>
     </section>
 
+    @if (item.trazabilidadAdministrativa; as trace) {
+      <section class="panel admin-detail-section"><h2>Lugar original de presentación / punto de recogida</h2>
+        <p>{{ trace.lugarPresentacion || 'Dirección original no disponible' }}</p>
+        <p class="muted-copy">Dato privado. No representa la ubicación logística actual.</p>
+      </section>
+      <app-donation-custody [data]="trace.situacion" [donationState]="item.estado" />
+      <section class="panel admin-detail-section"><h2>Saldos brutos de conciliación</h2>
+        <p>Los saldos brutos pueden ser negativos; los saldos operativos permanecen sin cambios.</p>
+        @for (balance of trace.saldosBrutos ?? []; track $index) {
+          <p [attr.role]="balance.saldoBruto < 0 ? 'alert' : null" [class.alert]="balance.saldoBruto < 0">
+            @if (balance.saldoBruto < 0) { Requiere conciliación: }
+            {{ balance.recurso }} / {{ balance.unidad }} · {{ balance.tipo }} · {{ balance.centro || 'Centro no identificado' }}: {{ balance.saldoBruto | number:'1.0-3' }}
+          </p>
+        }
+      </section>
+      <section class="panel admin-detail-section"><h2>Historial operativo por recurso y destino de distribución</h2>
+        @for (operation of trace.operaciones; track $index) {
+          <article class="detail-line"><div><h3>{{ operation.recurso }} / {{ operation.unidad }} · {{ operation.movimiento.evento }}</h3>
+            <p>{{ operation.movimiento.fechaHora | date:'dd/MM/yyyy HH:mm' }} · {{ operation.movimiento.estado }}</p>
+            <p>Origen: {{ operation.movimiento.origen?.nombre || 'No documentado' }} · {{ operation.movimiento.origen?.direccionInstitucional }}</p>
+            <p>Destino: {{ operation.movimiento.destino?.nombre || operation.movimiento.zona || 'No documentado' }} · {{ operation.movimiento.destino?.direccionInstitucional }}</p>
+            <p>Enviada: {{ operation.movimiento.cantidadEnviada === null ? 'No aplica' : (operation.movimiento.cantidadEnviada | number:'1.0-3') }} · Recibida / asignada / entregada: {{ operation.movimiento.cantidadRecibida === null ? 'No aplica' : (operation.movimiento.cantidadRecibida | number:'1.0-3') }}</p>
+            <p>Responsable: {{ operation.responsableNombre || 'No disponible' }} · ID {{ operation.responsableId }} · Operación {{ operation.operacion }}</p>
+            @if (operation.observaciones) { <p>Observaciones administrativas: {{ operation.observaciones }}</p> }
+          </div></article>
+        } @empty { <p>No hay operaciones logísticas detalladas registradas.</p> }
+      </section>
+    }
     <section class="admin-detail-grid" aria-label="Información de la donación">
       <article class="panel admin-detail-card">
         <p class="eyebrow">DONANTE</p><h2>{{ item.donante.nombre }}</h2><p>Identificador {{ item.donante.id }}</p>
@@ -33,7 +62,7 @@
           @for (line of item.detalles; track line.recursoId) {
             <article class="detail-line">
               <div><h3>{{ line.recursoNombre }}</h3><p>{{ line.unidadNombre }}{{ line.unidadSimbolo ? ' · ' + line.unidadSimbolo : '' }}</p></div>
-              <dl><div><dt>Declarada preliminar</dt><dd>{{ line.cantidadDonada | number:'1.0-3' }}</dd></div><div><dt>Recibida</dt><dd>{{ line.cantidadRecibidaAcopio | number:'1.0-3' }}</dd></div></dl>
+              <dl><div><dt>Declarada preliminar</dt><dd>{{ line.cantidadDonada | number:'1.0-3' }}</dd></div><div><dt>Recibida</dt><dd>{{ line.cantidadRecibidaAcopio | number:'1.0-3' }}</dd></div><div><dt>Diferencia (recibida − declarada)</dt><dd>{{ line.cantidadRecibidaAcopio - line.cantidadDonada | number:'1.0-3' }}</dd></div></dl>
             </article>
           }
         </div>

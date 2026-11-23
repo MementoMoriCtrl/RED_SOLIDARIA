@@ -20,4 +20,8 @@ public class CollectionCenter {
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
     public String getUbicacion() { return ubicacion; }
+    public String getDescripcion() { return descripcion; }
+    public void actualizar(String nombre, String ubicacion, String descripcion) {
+        this.nombre = nombre; this.ubicacion = ubicacion; this.descripcion = descripcion;
+    }
 }

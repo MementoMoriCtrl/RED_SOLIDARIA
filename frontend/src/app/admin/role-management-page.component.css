@@ -1,0 +1,11 @@
+.search { flex:1; max-width:38rem; }
+textarea { width:100%; min-width:0; padding:.65rem .75rem; border:1px solid #cbd5e1; border-radius:8px; font:inherit; resize:vertical; }
+.permission-list { display:grid; gap:.5rem; margin:1rem 0; padding:1rem; border:1px solid #e2e8f0; border-radius:9px; }
+.permission-list legend { padding:0 .35rem; color:#475569; font-weight:700; font-size:.8rem; }
+.permission-option { display:flex; align-items:center; gap:.75rem; padding:.6rem; border-radius:8px; background:#f8fafc; }
+.permission-option input { width:18px; min-height:18px; flex:none; }
+.permission-option span:first-of-type { display:grid; gap:.2rem; flex:1; overflow-wrap:anywhere; }
+.permission-option small { font-weight:400; color:#64748b; }
+.badge { padding:.25rem .5rem; border-radius:999px; background:#fef3c7; color:#92400e; font-size:.68rem; font-weight:700; }
+.assigned { overflow-wrap:anywhere; color:#475569; font-size:.85rem; }
+.permission-form { margin:1rem 0; }

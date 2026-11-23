@@ -12,6 +12,8 @@
     <label>Estado
       <input name="stateFilter" [(ngModel)]="stateFilter" maxlength="30" placeholder="Estado" autocomplete="off" />
     </label>
+    <label>Inicio desde <input type="date" name="filterFrom" [(ngModel)]="filterFrom" /></label>
+    <label>Inicio hasta <input type="date" name="filterTo" [(ngModel)]="filterTo" /></label>
     <button class="primary-button" type="submit" [disabled]="loading">{{ loading ? 'Buscando…' : 'Buscar' }}</button>
     <button class="secondary-button" type="button" [disabled]="saving || loadingDetail" (click)="newEmergency()">Nueva emergencia</button>
   </form>

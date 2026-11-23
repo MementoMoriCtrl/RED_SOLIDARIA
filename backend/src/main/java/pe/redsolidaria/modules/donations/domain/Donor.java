@@ -15,4 +15,5 @@ public class Donor {
     public Donor(String nombre) { this.nombre = nombre; }
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
+    public void actualizar(String nombre) { this.nombre = nombre; }
 }

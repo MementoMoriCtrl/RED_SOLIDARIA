@@ -13,7 +13,7 @@
         </div>
       </div>
 
-      <p class="login-explanation">Las credenciales se mantienen solo en memoria y se validan con HTTP Basic. La consulta pública de trazabilidad sigue disponible sin iniciar sesión.</p>
+      <p class="login-explanation">Inicia sesión para acceder a las operaciones autorizadas. La consulta pública de trazabilidad sigue disponible sin iniciar sesión.</p>
 
       <form class="login-form" (ngSubmit)="continuar()">
         <label for="organization-email">Correo de acceso</label>
@@ -27,7 +27,7 @@
         <div class="auth-status auth-pending" role="status">Validando credenciales con el backend…</div>
         <button type="button" class="secondary-button logout-button" (click)="cerrarSesion()">Cerrar sesión y limpiar credenciales</button>
       } @else if (authState() === 'authenticated') {
-        @if (basicAuthHasAdmin()) {
+        @if (hasAdmin()) {
           <div class="auth-status" role="status">Acceso administrativo validado. Abriendo el panel...</div>
         } @else {
           <div class="alert" role="alert">Las credenciales son válidas, pero tu cuenta no tiene permiso de acceso administrativo.</div>
@@ -40,6 +40,10 @@
 
       @if (authState() === 'invalid') {
         <div class="alert" role="alert">El correo o la contraseña son incorrectos.</div>
+      }
+
+      @if (authState() === 'csrf-error') {
+        <div class="alert" role="alert">La validación de seguridad caducó. Inténtalo de nuevo.</div>
       }
 
       @if (authState() === 'error') {

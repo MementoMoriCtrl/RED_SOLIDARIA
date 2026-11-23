@@ -1,23 +1,14 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { BasicAuthService } from './basic-auth.service';
+import { map } from 'rxjs';
+import { SessionAuthService } from './session-auth.service';
 
-export const authenticatedGuard: CanActivateFn = () => {
-  const auth = inject(BasicAuthService);
-  return auth.state() === 'authenticated' && auth.hasCredentials()
-    ? true
-    : inject(Router).createUrlTree(['/acceso-organizaciones']);
-};
-
-export const administratorGuard: CanActivateFn = () => {
-  const auth = inject(BasicAuthService);
-  return auth.state() === 'authenticated' && auth.hasCredentials() && auth.hasPermission('ACCESO_ADMINISTRAR')
-    ? true
-    : inject(Router).createUrlTree(['/acceso-organizaciones']);
-};
-
-export const donationRegistrationGuard: CanActivateFn = () => {
-  const auth = inject(BasicAuthService);
-  return auth.state() === 'authenticated' && auth.hasCredentials() && auth.hasPermission('DONACION_REGISTRAR')
-    ? true : inject(Router).createUrlTree(['/acceso-organizaciones']);
-};
+function guard(permission?: string): ReturnType<CanActivateFn> {
+  const auth = inject(SessionAuthService);
+  const router = inject(Router);
+  return auth.restore().pipe(map(() => auth.state() === 'authenticated' && (!permission || auth.hasPermission(permission))
+    ? true : router.createUrlTree(['/acceso-organizaciones'])));
+}
+export const authenticatedGuard: CanActivateFn = () => guard();
+export const administratorGuard: CanActivateFn = () => guard('ACCESO_ADMINISTRAR');
+export const donationRegistrationGuard: CanActivateFn = () => guard('DONACION_REGISTRAR');

@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { AuthenticatedProfile, BasicAuthService } from '../auth/basic-auth.service';
+import { AuthenticatedProfile, SessionAuthService } from '../auth/session-auth.service';
 import { AppShellComponent } from '../shared/app-shell.component';
 
 @Component({
@@ -14,7 +14,7 @@ import { AppShellComponent } from '../shared/app-shell.component';
 })
 export class AdminDashboardPageComponent implements OnInit {
   private readonly http = inject(HttpClient);
-  private readonly auth = inject(BasicAuthService);
+  private readonly auth = inject(SessionAuthService);
   private readonly router = inject(Router);
   private readonly changeDetector = inject(ChangeDetectorRef);
 

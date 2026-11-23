@@ -49,7 +49,8 @@ class DonationVerificationServiceTest {
     @Test void registrantCannotVerifyButSameIndependentVerifierCanReceivePartials() {
         var first=request("4","4","0","0",false);
         assertEquals(403,assertThrows(ResponseStatusException.class,() -> service.register(22L,"registrar",first)).getStatusCode().value());
-        service.register(22L,"verifier",first); service.register(22L,"verifier",request("6","6","0","0",true));
+        assertEquals("REGISTRADA",service.register(22L,"verifier",first).estado());
+        assertEquals("RECIBIDA",service.register(22L,"verifier",request("6","6","0","0",true)).estado());
         assertEquals(0,line.getCantidadRecibidaAcopio().compareTo(q("10"))); assertEquals(q("10.000"),line.getCantidadDonada());
         assertEquals(2,stored.size()); assertTrue(line.isCerrada());
     }
@@ -99,7 +100,7 @@ class DonationVerificationServiceTest {
         assertEquals(q("10.000"),line.getCantidadDonada());
     }
     @Test void closesWithZeroAcceptedWithoutInventoryOrIngressDate() {
-        service.register(22L,"verifier",request("10","0","10","0",true));
+        assertEquals("RECIBIDA",service.register(22L,"verifier",request("10","0","10","0",true)).estado());
         assertEquals(0,line.getCantidadRecibidaAcopio().signum()); assertNull(donation.getFechaIngreso());
         assertTrue(line.isCerrada()); assertEquals(0,line.getNoAceptada().compareTo(q("10")));
         assertEquals("CERRADA",service.progress(22L,"verifier").getFirst().avance());
@@ -129,9 +130,19 @@ class DonationVerificationServiceTest {
         assertEquals(0,line.getCantidadRecibidaAcopio().compareTo(q("10"))); assertEquals("RECHAZADO",op.getDecision()); assertEquals(original,op.getRespuesta());
     }
     @Test void closedShortReceiptCannotBeReopenedByANewUuid() {
-        service.register(22L,"verifier",request("4","4","0","0",true));
+        assertEquals("RECIBIDA",service.register(22L,"verifier",request("4","4","0","0",true)).estado());
+        assertEquals(0,service.progress(22L,"verifier").getFirst().diferencia().compareTo(q("-6")));
         assertThrows(ResponseStatusException.class,() -> service.register(22L,"verifier",request("6","6","0","0",false)));
         assertEquals(0,line.getCantidadRecibidaAcopio().compareTo(q("4")));
+    }
+    @Test void remainsRegisteredUntilEveryResourceHasFinishedVerification() {
+        var secondResource=mock(Resource.class); when(secondResource.getId()).thenReturn(9L);
+        var second=new DonationLine(donation,secondResource,q("5")); donation.getDetalles().add(second);
+        assertEquals("REGISTRADA",service.register(22L,"verifier",request("4","4","0","0",true)).estado());
+        var finalReceipt=new RegisterReceiptRequest(List.of(new ReceiptLineRequest(9L,q("5"))),null,null,UUID.randomUUID());
+        assertEquals("RECIBIDA",service.register(22L,"verifier",finalReceipt).estado());
+        assertEquals(0,line.getCantidadRecibidaAcopio().compareTo(q("4")));
+        assertEquals(0,second.getCantidadRecibidaAcopio().compareTo(q("5")));
     }
     @Test void replaysAnOriginalV2FingerprintBeforeApplyingTheNewVerifierRule() throws Exception {
         String uuid=UUID.randomUUID().toString();

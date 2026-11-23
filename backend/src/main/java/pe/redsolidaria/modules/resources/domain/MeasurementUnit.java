@@ -19,4 +19,5 @@ public class MeasurementUnit {
     public String getCodigo() { return codigo; }
     public String getNombre() { return nombre; }
     public String getSimbolo() { return simbolo; }
+    public void actualizar(String nombre, String simbolo) { this.nombre = nombre; this.simbolo = simbolo; }
 }

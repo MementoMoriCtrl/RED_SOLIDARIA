@@ -40,7 +40,11 @@ class DonationQueryServiceTest {
     void setUp() {
         donations = mock(DonationRepository.class);
         movements = mock(DonationMovementRepository.class);
-        service = new DonationQueryService(donations, movements);
+        var custody = mock(pe.redsolidaria.modules.donations.application.DonationCustodyService.class);
+        when(custody.read(org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.anyList()))
+            .thenReturn(new pe.redsolidaria.modules.donations.api.dto.CustodyDtos.AdministrativeCustody(null,
+                new pe.redsolidaria.modules.donations.api.dto.CustodyDtos.PublicCustody("Dirección protegida",null,List.of()),List.of(),List.of()));
+        service = new DonationQueryService(donations, movements,custody);
     }
 
     @Test

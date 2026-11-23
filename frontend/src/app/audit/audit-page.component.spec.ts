@@ -3,7 +3,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { basicAuthInterceptor } from '../auth/basic-auth.interceptor';
+import { sessionInterceptor } from '../auth/session.interceptor';
 import { routes } from '../app.routes';
 import { AuditPageComponent } from './audit-page.component';
 
@@ -14,7 +14,7 @@ describe('AuditPageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AuditPageComponent],
-      providers: [provideRouter(routes), provideHttpClient(withInterceptors([basicAuthInterceptor])), provideHttpClientTesting()],
+      providers: [provideRouter(routes), provideHttpClient(withInterceptors([sessionInterceptor])), provideHttpClientTesting()],
     }).compileComponents();
     fixture = TestBed.createComponent(AuditPageComponent);
     http = TestBed.inject(HttpTestingController);

@@ -4,14 +4,14 @@ API REST modular en Java 25 y Spring Boot 4.1.1, gestionada con Maven Wrapper.
 
 ## Configuración y ejecución normal
 
-La base `red_solidaria` debe existir y sus migraciones deben estar aplicadas. Configura `DB_URL`, `DB_USERNAME` y `DB_PASSWORD` en el entorno local (Spring Boot no carga `.env` automáticamente). La URL predeterminada es `jdbc:mysql://localhost:3306/red_solidaria`.
+La base elegida debe existir y sus migraciones deben estar aplicadas. Configura explícitamente `DB_URL`, `DB_USERNAME` y `DB_PASSWORD` para el entorno autorizado (Spring Boot no carga `.env` automáticamente). No existe una URL predeterminada. Las pruebas MySQL usan exclusivamente `TEST_DB_URL`, `TEST_DB_USERNAME` y `TEST_DB_PASSWORD` con sus controles de destino.
 
 ```powershell
 .\mvnw.cmd test
 .\mvnw.cmd spring-boot:run
 ```
 
-Hibernate usa `spring.jpa.hibernate.ddl-auto=validate`; Flyway administra el esquema.
+Hibernate usa `spring.jpa.hibernate.ddl-auto=validate`. Flyway está deshabilitado por defecto; para una migración autorizada debe habilitarse explícitamente mediante `SPRING_FLYWAY_ENABLED=true` en el entorno y destino correspondientes.
 
 ## Crear el primer administrador
 

@@ -20,6 +20,8 @@ import pe.redsolidaria.modules.donations.persistence.DonationLineRepository;
 import pe.redsolidaria.modules.emergencies.domain.*;
 import pe.redsolidaria.modules.emergencies.persistence.AffectedZoneRepository;
 import pe.redsolidaria.modules.needs.api.dto.NeedDtos.CreateNeedRequest;
+import pe.redsolidaria.modules.needs.api.dto.NeedDtos.UpdateNeedRequest;
+import pe.redsolidaria.modules.needs.api.dto.NeedDtos.TransitionNeedRequest;
 import pe.redsolidaria.modules.needs.application.NeedManagementService;
 import pe.redsolidaria.modules.needs.domain.Need;
 import pe.redsolidaria.modules.needs.persistence.NeedRepository;
@@ -38,13 +40,51 @@ class NeedManagementServiceTest {
     pe.redsolidaria.modules.logistics.LogisticsRepository logistics = mock(pe.redsolidaria.modules.logistics.LogisticsRepository.class);
     NeedManagementService service = new NeedManagementService(needs, zones, resources, donations, lines, users, audit, JsonMapper.builder().build(), logistics);
 
+    Need transitionFixture() {
+        var zone = mock(AffectedZone.class); var emergency = mock(Emergency.class);
+        var resource = mock(Resource.class); var unit = mock(MeasurementUnit.class);
+        when(zone.getId()).thenReturn(2L); when(zone.getEmergencia()).thenReturn(emergency);
+        when(emergency.getId()).thenReturn(1L); when(resource.getUnidadMedida()).thenReturn(unit);
+        var need = spy(new Need(zone, resource, BigDecimal.TEN, "ALTA", null));
+        when(need.getId()).thenReturn(4L); when(needs.findByIdForUpdate(4L)).thenReturn(Optional.of(need));
+        when(lines.assignedToNeed(4L)).thenReturn(BigDecimal.TEN);
+        when(users.findByCorreo("admin")).thenReturn(Optional.of(mock(UserAccount.class)));
+        return need;
+    }
+
+    @Test void closesOnlyWhenFullyDeliveredAndAuditsReason() {
+        var need = transitionFixture(); var request = new TransitionNeedRequest(" cumplida ");
+        when(lines.deliveredToNeed(4L)).thenReturn(new BigDecimal("9"));
+        assertThrows(ResponseStatusException.class, () -> service.transition(1, 2, 4, "admin", "CERRADA", request));
+        verifyNoInteractions(audit); assertEquals("PENDIENTE", need.getEstado());
+        when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.TEN);
+        assertEquals("CERRADA", service.transition(1, 2, 4, "admin", "CERRADA", request).estado());
+        var record = ArgumentCaptor.forClass(AuditRecord.class); verify(audit).saveAndFlush(record.capture());
+        assertEquals("TRANSICION_NECESIDAD", record.getValue().getAccion());
+        assertTrue(record.getValue().getDatosAnteriores().contains("PENDIENTE"));
+        assertTrue(record.getValue().getDatosNuevos().contains("cumplida"));
+        assertThrows(ResponseStatusException.class, () -> service.update(1, 2, 4, "admin", new UpdateNeedRequest(BigDecimal.TEN, "ALTA", null)));
+    }
+
+    @Test void cancellationAllowsPartialDeliveryOnlyWithoutPendingReservations() {
+        var need = transitionFixture(); var request = new TransitionNeedRequest("Cambio de necesidades");
+        when(lines.deliveredToNeed(4L)).thenReturn(new BigDecimal("4"));
+        when(lines.sourcesWithPendingReservations(4L)).thenReturn(List.of(5L));
+        assertThrows(ResponseStatusException.class, () -> service.transition(1, 2, 4, "admin", "CANCELADA", request));
+        verifyNoInteractions(audit); assertEquals("PENDIENTE", need.getEstado());
+        when(lines.sourcesWithPendingReservations(4L)).thenReturn(List.of());
+        assertEquals("CANCELADA", service.transition(1, 2, 4, "admin", "CANCELADA", request).estado());
+        assertThrows(ResponseStatusException.class, () -> service.transition(1, 2, 4, "admin", "CERRADA", request));
+        verify(lines, never()).saveAndFlush(any());
+    }
+
     @Test void registersNeedWithAuditAndKeepsReceivedSeparateFromDelivered() {
         var zone = mock(AffectedZone.class);
         var resource = mock(Resource.class);
         var unit = mock(MeasurementUnit.class);
         when(zones.findByIdAndEmergencia_Id(2L, 1L)).thenReturn(Optional.of(zone));
         when(zone.getId()).thenReturn(2L);
-        when(resources.findById(3L)).thenReturn(Optional.of(resource));
+        when(resources.findByIdForUpdate(3L)).thenReturn(Optional.of(resource));
         when(resource.getEstado()).thenReturn("ACTIVO");
         when(resource.getId()).thenReturn(3L);
         when(resource.getUnidadMedida()).thenReturn(unit);
@@ -58,6 +98,9 @@ class NeedManagementServiceTest {
         when(lines.assignedToNeed(4L)).thenReturn(BigDecimal.ZERO);
         when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.ZERO);
         var response = service.create(1, 2, "ADMIN", new CreateNeedRequest(3L, new BigDecimal("100.000"), "ALTA", null));
+        var order = inOrder(resources, needs);
+        order.verify(resources).findByIdForUpdate(3L);
+        order.verify(needs).saveAndFlush(any());
         assertEquals(new BigDecimal("100.000"), response.pendienteEntregar());
         assertEquals(BigDecimal.ZERO, response.entregada());
         var record = ArgumentCaptor.forClass(AuditRecord.class);
@@ -102,5 +145,41 @@ class NeedManagementServiceTest {
         assertThrows(ResponseStatusException.class, () -> service.create(1, 2, "admin",
                 new CreateNeedRequest(3L, new BigDecimal("0.0001"), "ALTA", null)));
         verifyNoInteractions(needs, resources, audit);
+    }
+
+    @Test void updatesOnlyEditableFieldsAndAuditsBeforeAndAfter() {
+        var zone = mock(AffectedZone.class); var emergency = mock(Emergency.class);
+        var resource = mock(Resource.class); var unit = mock(MeasurementUnit.class);
+        when(zone.getId()).thenReturn(2L); when(zone.getEmergencia()).thenReturn(emergency);
+        when(emergency.getId()).thenReturn(1L); when(resource.getId()).thenReturn(3L);
+        when(resource.getUnidadMedida()).thenReturn(unit);
+        var need = spy(new Need(zone, resource, new BigDecimal("10"), "ALTA", "antes"));
+        when(need.getId()).thenReturn(4L);
+        when(needs.findByIdForUpdate(4L)).thenReturn(Optional.of(need));
+        when(lines.assignedToNeed(4L)).thenReturn(new BigDecimal("4"));
+        when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.ONE);
+        when(users.findByCorreo("admin")).thenReturn(Optional.of(mock(UserAccount.class)));
+        var result = service.update(1, 2, 4, "ADMIN", new UpdateNeedRequest(new BigDecimal("4"), " MEDIA ", " después "));
+        assertEquals(new BigDecimal("4"), result.requerida());
+        assertEquals("MEDIA", result.prioridad()); assertEquals("después", result.observaciones());
+        assertSame(zone, need.getZona()); assertSame(resource, need.getRecurso());
+        var record = ArgumentCaptor.forClass(AuditRecord.class); verify(audit).saveAndFlush(record.capture());
+        assertEquals("EDICION_NECESIDAD", record.getValue().getAccion());
+        assertTrue(record.getValue().getDatosAnteriores().contains("antes"));
+        assertTrue(record.getValue().getDatosNuevos().contains("después"));
+    }
+
+    @Test void rejectsReductionBelowAssignedAndWrongZoneWithoutWrites() {
+        var zone = mock(AffectedZone.class); var emergency = mock(Emergency.class);
+        when(zone.getId()).thenReturn(2L); when(zone.getEmergencia()).thenReturn(emergency);
+        when(emergency.getId()).thenReturn(1L);
+        var need = new Need(zone, mock(Resource.class), BigDecimal.TEN, "ALTA", null);
+        when(needs.findByIdForUpdate(4L)).thenReturn(Optional.of(need));
+        when(lines.assignedToNeed(4L)).thenReturn(new BigDecimal("4"));
+        var request = new UpdateNeedRequest(new BigDecimal("3"), "BAJA", null);
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.update(1, 2, 4, "admin", request)).getStatusCode().value());
+        assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.update(1, 99, 4, "admin", request)).getStatusCode().value());
+        assertEquals(BigDecimal.TEN, need.getCantidadRequerida()); assertEquals("ALTA", need.getPrioridad());
+        verify(needs, never()).saveAndFlush(any()); verifyNoInteractions(audit);
     }
 }

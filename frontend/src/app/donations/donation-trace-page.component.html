@@ -43,6 +43,7 @@
 
     @if (resultado; as donacion) {
       <div class="results" aria-live="polite">
+        <app-donation-custody [data]="donacion.trazabilidad" [donationState]="donacion.estado" />
         <section class="panel overview" aria-labelledby="overview-title">
           <div class="section-heading">
             <div>
@@ -57,6 +58,7 @@
               <dt>Código de trazabilidad</dt>
               <dd class="tracking-code">{{ donacion.codigoTrazabilidad }}</dd>
             </div>
+            <p>El estado RECIBIDA indica que terminó la verificación; la cantidad recibida puede diferir de la declarada. La diferencia puede cambiar si hay excedentes pendientes de decisión.</p>
             <div class="summary-item">
               <dt>Fecha de registro</dt>
               <dd>{{ donacion.fechaRegistro ? (donacion.fechaRegistro | date:'dd/MM/yyyy, HH:mm') : 'No disponible' }}</dd>
@@ -66,9 +68,10 @@
               <dd>{{ donacion.fechaIngreso ? (donacion.fechaIngreso | date:'dd/MM/yyyy, HH:mm') : 'Aún no registrada' }}</dd>
             </div>
             <div class="summary-item">
-              <dt>Centro de acopio</dt>
+              <dt>Centro de acopio asociado</dt>
               <dd>{{ donacion.centroAcopio?.nombre || 'Sin centro asignado' }}</dd>
               <span class="secondary-value">{{ donacion.centroAcopio?.ubicacion || 'Ubicación no disponible' }}</span>
+              <span class="secondary-value">{{ donacion.trazabilidad?.recepcionAcopioConfirmada ? 'Recepción física confirmada en acopio' : 'Recepción en acopio pendiente de confirmación documental' }}</span>
             </div>
           </dl>
         </section>
@@ -90,6 +93,7 @@
                     <th scope="col">Recurso</th>
                     <th scope="col">Declarada preliminar</th>
                     <th scope="col">Recibida en acopio</th>
+                      <th scope="col">Diferencia (recibida − declarada)</th>
                     <th scope="col">Unidad</th>
                   </tr>
                 </thead>
@@ -99,6 +103,7 @@
                       <th scope="row">{{ detalle.recursoNombre || 'Recurso no disponible' }}</th>
                       <td>{{ detalle.cantidadDonada | number:'1.0-3' }}</td>
                       <td>@if (detalle.cantidadRecibidaAcopio !== null) { {{ detalle.cantidadRecibidaAcopio | number:'1.0-3' }} } @else { <span class="pending-badge">Pendiente</span> }</td>
+                        <td>@if (detalle.cantidadRecibidaAcopio !== null) { {{ detalle.cantidadRecibidaAcopio - detalle.cantidadDonada | number:'1.0-3' }} } @else { <span class="pending-badge">Pendiente</span> }</td>
                       <td>{{ detalle.unidadNombre || detalle.unidadCodigo || 'No indicada' }}@if (detalle.unidadSimbolo) { <span class="unit-symbol">({{ detalle.unidadSimbolo }})</span> }</td>
                     </tr>
                   }
@@ -134,10 +139,13 @@
                       </span>
                     </div>
                     <dl class="movement-details">
-                      <div class="movement-location">
-                        <dt>Ubicación</dt>
-                        <dd>{{ movimiento.ubicacion || 'No indicada' }}</dd>
-                      </div>
+                      @if (movimiento.origen) { <div><dt>Origen</dt><dd>{{ movimiento.origen.nombre }} · {{ movimiento.origen.direccionInstitucional }}</dd></div> }
+                      @if (movimiento.destino) { <div><dt>{{ movimiento.cantidadRecibida == null ? 'Destino previsto' : 'Centro receptor' }}</dt><dd>{{ movimiento.destino.nombre }} · {{ movimiento.destino.direccionInstitucional }}</dd></div> }
+                      @if (movimiento.zona) { <div><dt>Zona de destino</dt><dd>{{ movimiento.zona }}</dd></div> }
+                      @if (movimiento.ubicacion && !movimiento.origen && !movimiento.destino && !movimiento.zona) { <div class="movement-location"><dt>Referencia pública</dt><dd>{{ movimiento.ubicacion }}</dd></div> }
+                      @if (movimiento.recurso) { <div><dt>Recurso</dt><dd>{{ movimiento.recurso }} / {{ movimiento.unidad }}</dd></div> }
+                      @if (movimiento.cantidadEnviada != null) { <div><dt>Enviada</dt><dd>{{ movimiento.cantidadEnviada | number:'1.0-3' }} {{ movimiento.unidad }}</dd></div> }
+                      @if (movimiento.cantidadRecibida != null) { <div><dt>Cantidad de la operación</dt><dd>{{ movimiento.cantidadRecibida | number:'1.0-3' }} {{ movimiento.unidad }}</dd></div> }
                     </dl>
                   </article>
                 </li>

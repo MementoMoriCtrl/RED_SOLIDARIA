@@ -1,31 +1,33 @@
 import { Component } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { of } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes } from '../app.routes';
-import { BasicAuthService } from '../auth/basic-auth.service';
+import { SessionAuthService } from '../auth/session-auth.service';
 import { AppShellComponent } from './app-shell.component';
 
 @Component({ standalone: true, template: '' })
 class EmptyPageComponent {}
 
 describe('AppShellComponent', () => {
-  let auth: BasicAuthService;
+  let auth: SessionAuthService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [AppShellComponent],
       // Keep the application's real paths and guards; isolate page rendering from API calls.
-      providers: [provideRouter(routes.map(({ loadComponent, ...route }) => ({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter(routes.map(({ loadComponent, ...route }) => ({
         ...route, ...(loadComponent ? { component: EmptyPageComponent } : {}),
       })))],
     });
-    auth = TestBed.inject(BasicAuthService);
-    auth.logout();
+    auth = TestBed.inject(SessionAuthService);
+    auth.clear();
   });
 
   it('renders each admin navigation link once and marks the active route', async () => {
-    auth.provideCredentials('admin@example.test', 'test-password');
     auth.markAuthenticated({ nombre: 'Admin', apellido: 'User', correo: 'admin@example.test',
       rolCodigo: 'ADMINISTRADOR', rolNombre: 'Administrador', permisos: ['ACCESO_ADMINISTRAR'] });
     const fixture = TestBed.createComponent(AppShellComponent);
@@ -44,21 +46,19 @@ describe('AppShellComponent', () => {
   });
 
   it('keeps the requested module order for users with both permissions', () => {
-    auth.provideCredentials('admin@test', 'test-password');
     auth.markAuthenticated({ nombre: 'Admin', apellido: 'Test', correo: 'admin@test',
       rolCodigo: 'TEST', rolNombre: 'Test', permisos: ['ACCESO_ADMINISTRAR', 'DONACION_REGISTRAR'] });
     const fixture = TestBed.createComponent(AppShellComponent);
     fixture.detectChanges();
     const links = Array.from(fixture.nativeElement.querySelectorAll('.side-nav a')) as HTMLAnchorElement[];
     expect(links.map(link => link.getAttribute('href'))).toEqual([
-      '/admin', '/donaciones/registro', '/admin/catalogos-donaciones', '/admin/donaciones',
+      '/admin/reportes', '/admin', '/donaciones/registro', '/admin/usuarios', '/admin/roles', '/admin/catalogos-donaciones', '/admin/donaciones',
       '/admin/logistica', '/admin/emergencias', '/recursos', '/admin/auditoria', '/trazabilidad',
     ]);
     expect(fixture.nativeElement.querySelector('.sidebar-footer .sidebar-session-button')).toBeTruthy();
   });
 
   it('does not show administrative navigation to an authenticated non-admin', () => {
-    auth.provideCredentials('org@example.test', 'test-password');
     auth.markAuthenticated({ nombre: 'Org', apellido: 'User', correo: 'org@example.test',
       rolCodigo: 'ORGANIZACION', rolNombre: 'Organización', permisos: ['DONACION_REGISTRAR'] });
     const fixture = TestBed.createComponent(AppShellComponent);
@@ -83,7 +83,6 @@ describe('AppShellComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.session-button').length).toBe(0);
   });
   it('marks only the matching donation entry active for users with both permissions', async () => {
-    auth.provideCredentials('admin@test', 'test-password');
     auth.markAuthenticated({ nombre: 'Admin', apellido: 'Test', correo: 'admin@test',
       rolCodigo: 'TEST', rolNombre: 'Test', permisos: ['DONACION_REGISTRAR', 'ACCESO_ADMINISTRAR'] });
     const fixture = TestBed.createComponent(AppShellComponent);
@@ -102,7 +101,6 @@ describe('AppShellComponent', () => {
     { button: '.header-session-button', path: '/donaciones/registro' },
     { button: '.sidebar-session-button', path: '/admin/catalogos-donaciones' },
   ])('logs out through $button, clears authentication, and rejects protected routes', async ({ button, path }) => {
-    auth.provideCredentials('admin@test', 'test-password');
     auth.markAuthenticated({ nombre: 'Admin', apellido: 'Test', correo: 'admin@test',
       rolCodigo: 'TEST', rolNombre: 'Test', permisos: ['ACCESO_ADMINISTRAR', 'DONACION_REGISTRAR'] });
     const router = TestBed.inject(Router);
@@ -111,15 +109,15 @@ describe('AppShellComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelectorAll('.page-header .session-button').length).toBe(1);
     expect(fixture.nativeElement.querySelectorAll('.sidebar-footer .session-button').length).toBe(1);
-    const logout = vi.spyOn(auth, 'logout');
+    const logout = vi.spyOn(auth, 'logout').mockImplementation(() => { auth.clear(); return of(undefined); });
     const sharedLogout = vi.spyOn(fixture.componentInstance, 'cerrarSesion');
     fixture.nativeElement.querySelector(button).click();
     await fixture.whenStable();
     expect(sharedLogout).toHaveBeenCalledOnce();
     expect(logout).toHaveBeenCalledOnce();
     expect(auth.state()).toBe('signed-out');
-    expect(auth.hasCredentials()).toBe(false);
-    expect(auth.authorizationHeader()).toBeNull();
+    expect(auth.state()).toBe('signed-out');
+    expect(auth.profile()).toBeNull();
     expect(auth.username()).toBeNull();
     expect(auth.profile()).toBeNull();
     expect(auth.hasPermission('ACCESO_ADMINISTRAR')).toBe(false);
@@ -134,7 +132,6 @@ describe('AppShellComponent', () => {
     }
   });
   it('shows both logout actions to an authenticated organization without administrative permission', () => {
-    auth.provideCredentials('org@test', 'test-password');
     auth.markAuthenticated({ nombre: 'Org', apellido: 'Test', correo: 'org@test',
       rolCodigo: 'TEST', rolNombre: 'Test', permisos: ['DONACION_REGISTRAR'] });
     const fixture = TestBed.createComponent(AppShellComponent);

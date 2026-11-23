@@ -3,7 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AdministrativeDonationDetail, AdministrativeDonationFilters, AdministrativeDonationListItem, RegisterDonationReceiptRequest } from './donation-admin.model';
-import { CreateDonationRequest, CatalogItem, CatalogPage } from './donation-admin.model';
+import { CreateDonationRequest, CatalogDetail, CatalogItem, CatalogPage } from './donation-admin.model';
+import { MeasurementUnit } from '../resources/resource.model';
 
 @Injectable({ providedIn: 'root' })
 export class DonationAdminService {
@@ -14,6 +15,8 @@ export class DonationAdminService {
     let params = new HttpParams();
     if (filters.codigo?.trim()) params = params.set('codigo', filters.codigo.trim());
     if (filters.estado?.trim()) params = params.set('estado', filters.estado.trim());
+    if (filters.fechaDesde) params = params.set('fechaDesde', filters.fechaDesde);
+    if (filters.fechaHasta) params = params.set('fechaHasta', filters.fechaHasta);
     return this.http.get<AdministrativeDonationListItem[]>(`${this.endpoint}/listado`, { params });
   }
 
@@ -40,7 +43,16 @@ export class DonationAdminService {
   createCatalog(kind: string, request: { nombre: string; ubicacion: string; descripcion: string }) {
     return this.http.post<CatalogItem>(`/api/admin/catalogos-donaciones/${kind}`, request);
   }
+  catalogDetail(kind: 'donantes' | 'centros', id: number) {
+    return this.http.get<CatalogDetail>(`/api/admin/catalogos-donaciones/${kind}/${id}`);
+  }
+  updateCatalog(kind: 'donantes' | 'centros', id: number, request: { nombre: string; ubicacion: string | null; descripcion: string | null }) {
+    return this.http.put<CatalogDetail>(`/api/admin/catalogos-donaciones/${kind}/${id}`, request);
+  }
   createUnit(request: { codigo: string; nombre: string; simbolo: string }) {
     return this.http.post('/api/admin/catalogos-donaciones/unidades', request);
+  }
+  updateUnit(id: number, request: { nombre: string; simbolo: string | null }) {
+    return this.http.put<MeasurementUnit>(`/api/admin/catalogos-donaciones/unidades/${id}`, request);
   }
 }

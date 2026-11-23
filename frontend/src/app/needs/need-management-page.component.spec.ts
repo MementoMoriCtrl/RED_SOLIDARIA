@@ -54,6 +54,23 @@ describe('NeedManagementPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Todavía no hay necesidades registradas');
   });
 
+  it('requires a reason and submits the chosen transition', async () => {
+    flushInitial();
+    const component = fixture.componentInstance;
+    component.beginTransition(need, 'cancelar'); component.submitTransition();
+    http.expectNone(request => request.method === 'POST');
+    component.transitionReason = 'Entregas completadas'; component.submitTransition();
+    const request = http.expectOne(`${endpoint}/4/cancelar`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ motivo: 'Entregas completadas' });
+    request.flush({ ...need, estado: 'CANCELADA' });
+    http.expectOne(`${endpoint}?page=0`).flush({ ...page, content: [{ ...need, estado: 'CANCELADA' }] });
+    await fixture.whenStable();
+    expect(component.success).toBe('Necesidad cancelada.');
+    component.beginTransition({ ...need, estado: 'CANCELADA' }, 'cerrar');
+    expect(component.transitionNeed).toBeNull();
+  });
+
   it('validates decimal precision and submits a need under the selected zone', async () => {
     flushInitial();
     const component = fixture.componentInstance;
@@ -86,6 +103,25 @@ describe('NeedManagementPageComponent', () => {
     await fixture.whenStable();
     expect(component.needs.content[0].pendienteEntregar).toBe(7);
     expect(component.source).toBeNull();
+  });
+
+  it('edits only allowed fields and rejects quantities below assigned', async () => {
+    flushInitial();
+    const component = fixture.componentInstance;
+    component.edit({ ...need, observaciones: 'Anterior' });
+    expect(component.observations).toBe('Anterior');
+    component.quantity = 3; component.update();
+    http.expectNone(request => request.method === 'PUT');
+    component.quantity = 4; component.priority = 'MEDIA'; component.observations = 'Actualizada';
+    component.update();
+    const request = http.expectOne(`${endpoint}/4`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ cantidad: 4, prioridad: 'MEDIA', observaciones: 'Actualizada' });
+    request.flush(need);
+    http.expectOne(`${endpoint}?page=0`).flush(page);
+    await fixture.whenStable();
+    expect(component.editing).toBeNull();
+    expect(component.success).toBe('Necesidad actualizada.');
   });
 
   it('rejects delivered totals above assigned without sending a request', async () => {

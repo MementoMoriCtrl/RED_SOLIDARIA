@@ -5,12 +5,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, forkJoin, of, Subscription, switchMap, timer } from 'rxjs';
-import { BasicAuthService } from '../auth/basic-auth.service';
+import { SessionAuthService } from '../auth/session-auth.service';
 import { ResourceApiService } from '../resources/resource-api.service';
 import { MeasurementUnit, ResourceItem } from '../resources/resource.model';
 import { AppShellComponent } from '../shared/app-shell.component';
 import { DonationAdminService } from './donation-admin.service';
-import { CatalogPage, CreateDonationRequest } from './donation-admin.model';
+import { CatalogItem, CatalogPage, CreateDonationRequest } from './donation-admin.model';
 
 type CatalogKind = 'donantes' | 'centros' | 'emergencias';
 type CatalogTab = 'donantes' | 'centros' | 'distribucion' | 'unidades';
@@ -23,7 +23,7 @@ type CatalogTab = 'donantes' | 'centros' | 'distribucion' | 'unidades';
 export class DonationRegistrationPageComponent implements OnInit {
   private readonly api = inject(DonationAdminService);
   private readonly resourcesApi = inject(ResourceApiService);
-  private readonly auth = inject(BasicAuthService);
+  private readonly auth = inject(SessionAuthService);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -72,6 +72,9 @@ export class DonationRegistrationPageComponent implements OnInit {
   created: { id: number; codigoTrazabilidad: string } | null = null;
   registrationUnconfirmed = false;
   catalogKind: 'donantes' | 'centros' = 'donantes';
+  editingCatalog: { kind: 'donantes' | 'centros'; id: number } | null = null;
+  editName = ''; editLocation = ''; editDescription = '';
+  private editLocationWasNull = false; private editDescriptionWasNull = false;
   private readonly drafts = {
     donantes: { name: '', location: '', description: '' },
     centros: { name: '', location: '', description: '' },
@@ -83,6 +86,7 @@ export class DonationRegistrationPageComponent implements OnInit {
   get catalogDescription() { return this.drafts[this.catalogKind].description; }
   set catalogDescription(value: string) { this.drafts[this.catalogKind].description = value; }
   unitCode = ''; unitName = ''; unitSymbol = '';
+  editingUnit: MeasurementUnit | null = null; editUnitName = ''; editUnitSymbol = '';
   get canRegister() { return this.auth.hasPermission('DONACION_REGISTRAR'); }
   get canManageCatalogs() { return this.auth.hasPermission('ACCESO_ADMINISTRAR'); }
   ngOnInit(): void { this.load(); }
@@ -152,6 +156,34 @@ export class DonationRegistrationPageComponent implements OnInit {
         this.success = 'Registro añadido al catálogo.';
       }, error: (response: HttpErrorResponse) => { this.error = this.message(response); } });
   }
+  editCatalog(item: CatalogItem): void {
+    if (this.saving || this.loading || this.searching || !this.isCatalogPage || !this.canManageCatalogs) return;
+    const kind = this.catalogKind;
+    this.saving = true; this.error = null; this.success = null;
+    this.api.catalogDetail(kind, item.id).pipe(finalize(() => { this.saving = false; this.cd.markForCheck(); }))
+      .subscribe({ next: detail => {
+        this.editingCatalog = { kind, id: detail.id }; this.editName = detail.nombre;
+        this.editLocationWasNull = detail.ubicacion === null; this.editDescriptionWasNull = detail.descripcion === null;
+        this.editLocation = detail.ubicacion ?? ''; this.editDescription = detail.descripcion ?? '';
+      }, error: (response: HttpErrorResponse) => { this.error = this.message(response); } });
+  }
+  saveCatalogEdit(): void {
+    const edit = this.editingCatalog;
+    if (!edit || this.saving || this.loading || !this.isCatalogPage || !this.canManageCatalogs) return;
+    if (!this.editName.trim() || this.editName.trim().length > 150 || this.editLocation.length > 200
+        || new TextEncoder().encode(this.editDescription).length > 65535) {
+      this.error = 'Revisa nombre, ubicación y descripción.'; return;
+    }
+    this.saving = true; this.error = null; this.success = null;
+    this.api.updateCatalog(edit.kind, edit.id, { nombre: this.editName.trim(),
+      ubicacion: edit.kind === 'centros' && !(this.editLocationWasNull && this.editLocation === '') ? this.editLocation : null,
+      descripcion: edit.kind === 'centros' && !(this.editDescriptionWasNull && this.editDescription === '') ? this.editDescription : null })
+      .pipe(finalize(() => { this.saving = false; this.cd.markForCheck(); }))
+      .subscribe({ next: item => {
+        this.catalogs[edit.kind].content = this.catalogs[edit.kind].content.map(old => old.id === item.id ? item : old);
+        this.editingCatalog = null; this.success = 'Registro actualizado.';
+      }, error: (response: HttpErrorResponse) => { this.error = this.message(response); } });
+  }
   createUnit(): void {
     if (this.saving || this.loading || !this.isCatalogPage || !this.canManageCatalogs) return;
     if (!/^[A-Za-z0-9_-]{1,30}$/.test(this.unitCode) || !this.unitName.trim() || this.unitName.length > 80 || this.unitSymbol.length > 20) {
@@ -162,6 +194,26 @@ export class DonationRegistrationPageComponent implements OnInit {
       .pipe(finalize(() => { this.saving = false; this.cd.markForCheck(); }))
       .subscribe({ next: () => { this.success = 'Unidad registrada. Ya puedes seleccionarla al crear recursos.';
         this.unitCode = this.unitName = this.unitSymbol = ''; this.unitSearch = ''; this.reloadUnits();
+      }, error: (response: HttpErrorResponse) => { this.error = this.message(response); } });
+  }
+  editUnit(unit: MeasurementUnit): void {
+    if (this.saving || this.loading || this.unitsLoading || !this.isCatalogPage || !this.canManageCatalogs) return;
+    this.editingUnit = unit; this.editUnitName = unit.nombre; this.editUnitSymbol = unit.simbolo ?? '';
+    this.error = null; this.success = null;
+  }
+  saveUnitEdit(): void {
+    const unit = this.editingUnit;
+    if (!unit || this.saving || this.loading || this.unitsLoading || !this.isCatalogPage || !this.canManageCatalogs) return;
+    if (!this.editUnitName.trim() || this.editUnitName.length > 80 || this.editUnitSymbol.length > 20) {
+      this.error = 'Revisa nombre y símbolo de la unidad.'; return;
+    }
+    this.saving = true; this.error = null; this.success = null;
+    this.api.updateUnit(unit.id, { nombre: this.editUnitName.trim(),
+      simbolo: unit.simbolo === null && this.editUnitSymbol === '' ? null : this.editUnitSymbol })
+      .pipe(finalize(() => { this.saving = false; this.cd.markForCheck(); }))
+      .subscribe({ next: updated => {
+        this.units = this.units.map(item => item.id === updated.id ? updated : item);
+        this.editingUnit = null; this.success = 'Unidad actualizada.';
       }, error: (response: HttpErrorResponse) => { this.error = this.message(response); } });
   }
   reloadUnits(): void {

@@ -2,6 +2,7 @@ export interface NeedItem {
   id: number; zonaId: number; recursoId: number; recursoNombre: string; unidad: string;
   prioridad: string; estado: string; requerida: number; asignada: number; entregada: number;
   pendienteAsignar: number; pendienteEntregar: number;
+  observaciones?: string | null;
 }
 export interface DonationSource {
   detalleDonacionId: number; codigoTrazabilidad: string; estado: string;
@@ -10,5 +11,6 @@ export interface DonationSource {
 }
 export interface ResultPage<T> { content: T[]; totalElements: number; totalPages: number; page: number; }
 export interface CreateNeedRequest { recursoId: number; cantidad: number; prioridad: string; observaciones: string | null; }
+export interface UpdateNeedRequest { cantidad: number; prioridad: string; observaciones: string | null; }
 export interface SaveDeliveryRequest { totalAsignado: number; totalEntregado: number; }
 export interface DeliveryResult { entregaId: number | null; totalAsignado: number; totalEntregado: number; repetida: boolean; }

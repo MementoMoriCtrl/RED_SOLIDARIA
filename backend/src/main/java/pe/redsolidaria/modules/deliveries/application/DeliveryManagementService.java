@@ -73,6 +73,15 @@ public class DeliveryManagementService {
             throw conflict("El estado actual de la donación, recurso o necesidad no admite esta operación");
         if (assignDelta.signum() > 0 && lines.distributionAssigned(sourceId).add(assignDelta).compareTo(logistics.received(sourceId)) > 0)
             throw conflict("La asignación supera lo confirmado y disponible en distribución");
+        if (deliverDelta.signum() > 0) {
+            // Historical reservations have no confirmed distribution custody and cannot fund a new delivery.
+            var distributionPending = lines.distributionAssignedToPair(needId, sourceId).add(assignDelta)
+                    .subtract(lines.distributionDeliveredToPair(needId, sourceId));
+            if (deliverDelta.compareTo(distributionPending) > 0)
+                throw conflict("La entrega supera la reserva pendiente en distribución; las reservas históricas requieren conciliación");
+            if (lines.distributionDelivered(sourceId).add(deliverDelta).compareTo(logistics.received(sourceId)) > 0)
+                throw conflict("La entrega supera la recepción confirmada en distribución");
+        }
         if (lines.assignedToNeed(needId).add(assignDelta).compareTo(need.getCantidadRequerida()) > 0)
             throw conflict("La asignación supera la cantidad requerida por la necesidad");
         var delivery = deliveries.saveAndFlush(new Delivery(actor));

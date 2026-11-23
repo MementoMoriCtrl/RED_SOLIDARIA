@@ -54,6 +54,25 @@ public class DonationCatalogService {
         return new pe.redsolidaria.modules.resources.api.dto.ResourceDtos.MeasurementUnitResponse(
                 unit.getId(), unit.getCodigo(), unit.getNombre(), unit.getSimbolo());
     }
+    @Transactional
+    public pe.redsolidaria.modules.resources.api.dto.ResourceDtos.MeasurementUnitResponse updateUnit(long id, String email,
+            pe.redsolidaria.modules.resources.api.dto.ResourceDtos.UpdateMeasurementUnitRequest request) {
+        if (request == null || request.nombre() == null || request.nombre().isBlank() || request.nombre().length() > 80
+                || (request.simbolo() != null && request.simbolo().length() > 20))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa nombre y símbolo de la unidad");
+        var actor = users.findByCorreo(email.trim().toLowerCase(Locale.ROOT))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        var unit = units.findByIdForUpdate(id).orElseThrow(() -> missing());
+        var before = new pe.redsolidaria.modules.resources.api.dto.ResourceDtos.MeasurementUnitResponse(
+                unit.getId(), unit.getCodigo(), unit.getNombre(), unit.getSimbolo());
+        unit.actualizar(request.nombre().trim(), request.simbolo());
+        units.saveAndFlush(unit);
+        var after = new pe.redsolidaria.modules.resources.api.dto.ResourceDtos.MeasurementUnitResponse(
+                unit.getId(), unit.getCodigo(), unit.getNombre(), unit.getSimbolo());
+        audit.saveAndFlush(new AuditRecord(actor, "UNIDAD_MEDIDA", Long.toString(id), "EDICION_CATALOGO",
+                json.writeValueAsString(before), json.writeValueAsString(after)));
+        return after;
+    }
     public CatalogPage list(String kind, String text, int page) {
         var pageable = PageRequest.of(page, 20);
         Page<CatalogItem> result = switch (kind) {
@@ -68,6 +87,45 @@ public class DonationCatalogService {
         };
         return new CatalogPage(result.getContent(), result.getNumber(), result.getTotalPages());
     }
+    public CatalogDetail detail(String kind, long id) {
+        return switch (kind) {
+            case "donantes" -> { var d = donors.findById(id).orElseThrow(() -> missing());
+                yield new CatalogDetail(d.getId(), d.getNombre(), null, null); }
+            case "centros" -> { var c = centers.findById(id).orElseThrow(() -> missing());
+                yield new CatalogDetail(c.getId(), c.getNombre(), c.getUbicacion(), c.getDescripcion()); }
+            default -> throw missing();
+        };
+    }
+
+    @Transactional
+    public CatalogDetail update(String kind, long id, String email, CreateCatalogRequest request) {
+        if (request == null || request.nombre() == null || request.nombre().isBlank() || request.nombre().length() > 150
+                || (request.ubicacion() != null && request.ubicacion().length() > 200)
+                || (request.descripcion() != null && request.descripcion().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 65535))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa nombre, ubicación y descripción");
+        var actor = users.findByCorreo(email.trim().toLowerCase(Locale.ROOT))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        CatalogDetail before, after;
+        switch (kind) {
+            case "donantes" -> {
+                var d = donors.findByIdForUpdate(id).orElseThrow(() -> missing());
+                before = new CatalogDetail(d.getId(), d.getNombre(), null, null);
+                d.actualizar(request.nombre().trim()); donors.saveAndFlush(d);
+                after = new CatalogDetail(d.getId(), d.getNombre(), null, null);
+            }
+            case "centros" -> {
+                var c = centers.findByIdForUpdate(id).orElseThrow(() -> missing());
+                before = new CatalogDetail(c.getId(), c.getNombre(), c.getUbicacion(), c.getDescripcion());
+                c.actualizar(request.nombre().trim(), request.ubicacion(), request.descripcion()); centers.saveAndFlush(c);
+                after = new CatalogDetail(c.getId(), c.getNombre(), c.getUbicacion(), c.getDescripcion());
+            }
+            default -> throw missing();
+        }
+        audit.saveAndFlush(new AuditRecord(actor, kind.equals("donantes") ? "DONANTE" : "CENTRO_ACOPIO", Long.toString(id),
+                "EDICION_CATALOGO", json.writeValueAsString(before), json.writeValueAsString(after)));
+        return after;
+    }
+    private static ResponseStatusException missing() { return new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro de catálogo no encontrado"); }
     @Transactional
     public CatalogItem create(String kind, String email, CreateCatalogRequest request) {
         if (request.descripcion() != null && request.descripcion().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 65535)

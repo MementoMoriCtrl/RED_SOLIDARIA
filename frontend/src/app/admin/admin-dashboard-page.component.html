@@ -11,6 +11,17 @@
       <div class="alert" role="alert">{{ error }}</div>
     } @else {
       <section class="admin-grid" aria-label="Módulos disponibles">
+        <a class="panel admin-card" routerLink="/admin/reportes"><span class="admin-card-icon" aria-hidden="true">R</span><span class="eyebrow">CONSULTAS</span><h2>Reportes</h2><p>Consulta donaciones, inventario, entregas y emergencias.</p><span class="admin-card-link">Abrir reportes →</span></a>
+        <a class="panel admin-card" routerLink="/admin/usuarios">
+          <span class="admin-card-icon" aria-hidden="true">U</span><span class="eyebrow">ACCESO</span>
+          <h2>Gestión de usuarios</h2><p>Consulta y administra cuentas, roles y estados.</p>
+          <span class="admin-card-link">Abrir usuarios <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="panel admin-card" routerLink="/admin/roles">
+          <span class="admin-card-icon" aria-hidden="true">R</span><span class="eyebrow">ACCESO</span>
+          <h2>Roles y permisos</h2><p>Consulta y administra roles y sus permisos.</p>
+          <span class="admin-card-link">Abrir roles <span aria-hidden="true">→</span></span>
+        </a>
         @if (canRegisterDonation) {
           <a class="panel admin-card" routerLink="/donaciones/registro">
             <span class="admin-card-icon" aria-hidden="true">D</span>
@@ -64,11 +75,5 @@
         </a>
       </section>
 
-      <section class="future-section" aria-labelledby="future-title">
-        <div class="section-heading"><div><p class="eyebrow">PRÓXIMAMENTE</p><h2 id="future-title">Módulos pendientes</h2></div></div>
-        <div class="future-grid">
-          <article class="panel future-card"><h3>Gestión de usuarios</h3><p>Pendiente de implementación.</p></article>
-        </div>
-      </section>
     }
 </app-shell>

@@ -67,7 +67,7 @@ class DonationRegistrationServiceTest {
         when(donors.findById(11L)).thenReturn(Optional.of(donor));
         when(users.findByCorreo("responsable@example.test")).thenReturn(Optional.of(user));
         when(centers.findById(3L)).thenReturn(Optional.of(center));
-        when(resources.findAllById(List.of(7L))).thenReturn(List.of(resource));
+        when(resources.findByIdForUpdate(7L)).thenReturn(Optional.of(resource));
         when(resource.getId()).thenReturn(7L);
         when(resource.getNombre()).thenReturn("Agua");
         when(resource.getEstado()).thenReturn("ACTIVO");
@@ -110,8 +110,49 @@ class DonationRegistrationServiceTest {
     }
 
     @Test
+    void locksResourcesInAscendingOrderBeforeWritingDonation() {
+        var other = mock(Resource.class);
+        when(other.getId()).thenReturn(2L); when(other.getEstado()).thenReturn("ACTIVO");
+        when(resources.findByIdForUpdate(2L)).thenReturn(Optional.of(other));
+        var reversed = new CreateDonationRequest(11L, null, 3L, null, null,
+                List.of(new DonationLineRequest(7L, BigDecimal.ONE), new DonationLineRequest(2L, BigDecimal.ONE)));
+        service.register(reversed, "responsable@example.test");
+        var order = inOrder(resources, donations, lines);
+        order.verify(resources).findByIdForUpdate(2L);
+        order.verify(resources).findByIdForUpdate(7L);
+        order.verify(donations).saveAndFlush(any());
+        order.verify(lines).saveAllAndFlush(any());
+    }
+
+    @Test
+    void concurrentRegistrationsWithOppositeInputOrderUseSameLockOrder() throws Exception {
+        var other = mock(Resource.class);
+        when(other.getId()).thenReturn(2L); when(other.getEstado()).thenReturn("ACTIVO");
+        var low = new java.util.concurrent.locks.ReentrantLock();
+        var high = new java.util.concurrent.locks.ReentrantLock();
+        when(resources.findByIdForUpdate(2L)).thenAnswer(call -> { low.lock(); return Optional.of(other); });
+        when(resources.findByIdForUpdate(7L)).thenAnswer(call -> { high.lock(); return Optional.of(resource); });
+        when(lines.saveAllAndFlush(any())).thenAnswer(call -> {
+            try { return call.getArgument(0); } finally { high.unlock(); low.unlock(); }
+        });
+        var forward = new CreateDonationRequest(11L, null, 3L, null, null,
+                List.of(new DonationLineRequest(2L, BigDecimal.ONE), new DonationLineRequest(7L, BigDecimal.ONE)));
+        var reverse = new CreateDonationRequest(11L, null, 3L, null, null,
+                List.of(new DonationLineRequest(7L, BigDecimal.ONE), new DonationLineRequest(2L, BigDecimal.ONE)));
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try {
+            var a = executor.submit(() -> { start.await(); return service.register(forward, "responsable@example.test"); });
+            var b = executor.submit(() -> { start.await(); return service.register(reverse, "responsable@example.test"); });
+            start.countDown();
+            assertNotNull(a.get(5, java.util.concurrent.TimeUnit.SECONDS));
+            assertNotNull(b.get(5, java.util.concurrent.TimeUnit.SECONDS));
+        } finally { executor.shutdownNow(); }
+    }
+
+    @Test
     void rejectsUnknownResourceBeforeWriting() {
-        when(resources.findAllById(List.of(7L))).thenReturn(List.of());
+        when(resources.findByIdForUpdate(7L)).thenReturn(Optional.empty());
         assertEquals(404, assertThrows(ResponseStatusException.class,
                 () -> service.register(request(new BigDecimal("1")), "responsable@example.test")).getStatusCode().value());
         verify(donations, never()).saveAndFlush(any());

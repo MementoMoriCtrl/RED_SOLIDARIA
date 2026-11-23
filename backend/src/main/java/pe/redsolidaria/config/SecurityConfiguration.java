@@ -1,6 +1,5 @@
 package pe.redsolidaria.config;
 
-import java.util.Locale;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,12 +10,16 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.http.MediaType;
 import pe.redsolidaria.modules.access.persistence.UserRepository;
 
 @Configuration
@@ -26,14 +29,8 @@ public class SecurityConfiguration {
     public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(12); }
 
     @Bean
-    public UserDetailsService userDetailsService(UserRepository users) {
-        return correo -> users.findByCorreo(correo.trim().toLowerCase(Locale.ROOT))
-                .map(account -> User.withUsername(account.getCorreo())
-                        .password(account.getPasswordHash())
-                        .authorities(account.permisosEfectivos().toArray(String[]::new))
-                        .disabled(!"ACTIVO".equalsIgnoreCase(account.getEstado()))
-                        .build())
-                .orElseThrow(() -> new UsernameNotFoundException("Credenciales no válidas"));
+    public SessionIdentityService userDetailsService(UserRepository users) {
+        return new SessionIdentityService(users);
     }
 
     @Bean
@@ -45,14 +42,39 @@ public class SecurityConfiguration {
 
     @Bean
     @Profile("!local-bootstrap")
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider authenticationProvider) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider authenticationProvider,
+            SessionIdentityService identities) throws Exception {
         return http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(csrf -> csrf.csrfTokenRepository(new HttpSessionCsrfTokenRepository()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .sessionFixation(fixation -> fixation.changeSessionId()))
                 .authenticationProvider(authenticationProvider)
-                .httpBasic(httpBasic -> httpBasic.authenticationEntryPoint((request, response, exception) ->
-                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)))
+                .formLogin(login -> login.loginProcessingUrl("/api/auth/login")
+                        .usernameParameter("correo").passwordParameter("password")
+                        .successHandler((request, response, authentication) -> response.setStatus(HttpServletResponse.SC_NO_CONTENT))
+                        .failureHandler((request, response, exception) -> jsonError(response, 401, "AUTHENTICATION_FAILED"))
+                        .permitAll())
+                .logout(logout -> logout.logoutUrl("/api/auth/logout").invalidateHttpSession(true)
+                        .clearAuthentication(true).deleteCookies("JSESSIONID")
+                        .logoutSuccessHandler((request, response, authentication) -> response.setStatus(HttpServletResponse.SC_NO_CONTENT)))
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint((request, response, exception) -> jsonError(response, 401, "UNAUTHENTICATED"))
+                        .accessDeniedHandler((request, response, exception) -> {
+                            if (!(exception instanceof CsrfException)) {
+                                jsonError(response, 403, "ACCESS_DENIED");
+                                return;
+                            }
+                            var auth = SecurityContextHolder.getContext().getAuthentication();
+                            boolean authenticated = auth != null && auth.isAuthenticated()
+                                    && !(auth instanceof AnonymousAuthenticationToken);
+                            boolean login = "POST".equals(request.getMethod())
+                                    && (request.getContextPath() + "/api/auth/login").equals(request.getRequestURI());
+                            if (!authenticated && !login) jsonError(response, 401, "UNAUTHENTICATED");
+                            else jsonError(response, 403, "CSRF_INVALID");
+                        }))
+                .addFilterBefore(new SessionRevalidationFilter(identities), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ACCESO_ADMINISTRAR")
                         .requestMatchers(HttpMethod.POST, "/api/recursos/**").hasAuthority("ACCESO_ADMINISTRAR")
                         .requestMatchers(HttpMethod.PUT, "/api/recursos/**").hasAuthority("ACCESO_ADMINISTRAR")
@@ -70,5 +92,12 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/donaciones").hasAuthority("DONACION_REGISTRAR")
                         .anyRequest().authenticated())
                 .build();
+    }
+
+    static void jsonError(HttpServletResponse response, int status, String code) throws java.io.IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setHeader("Cache-Control", "no-store");
+        response.getWriter().write("{\"code\":\"" + code + "\"}");
     }
 }

@@ -80,11 +80,10 @@ public class DonationRegistrationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe indicarse una emergencia o un centro de acopio");
         }
 
-        List<Resource> foundResources = resources.findAllById(
-                request.detalles().stream().map(DonationLineRequest::recursoId).toList());
-        if (foundResources.size() != request.detalles().size()) {
-            throw notFound("Uno o más recursos no existen");
-        }
+        // All multi-resource registrations acquire row locks in ascending ID order.
+        List<Resource> foundResources = request.detalles().stream().map(DonationLineRequest::recursoId).sorted()
+                .map(id -> resources.findByIdForUpdate(id).orElseThrow(() -> notFound("Uno o más recursos no existen")))
+                .toList();
         if (foundResources.stream().anyMatch(resource -> !"ACTIVO".equals(resource.getEstado())))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Los recursos deben estar activos");
         Map<Long, Resource> resourcesById = foundResources.stream()

@@ -50,14 +50,28 @@ public final class DonationDtos {
                                         DonorSummary donante, Long emergenciaId, String emergenciaNombre,
                                         CollectionCenterSummary centroAcopio,
                                         List<DonationDetailSummary> detalles,
-                                        List<DonationMovementSummary> movimientos) {}
+                                        List<DonationMovementSummary> movimientos,
+                                        CustodyDtos.AdministrativeCustody trazabilidadAdministrativa) {
+        public DonationTraceResponse(Long id, String codigoTrazabilidad, LocalDateTime fechaRegistro,
+                LocalDateTime fechaIngreso, String estado, String observaciones, DonorSummary donante,
+                Long emergenciaId, String emergenciaNombre, CollectionCenterSummary centroAcopio,
+                List<DonationDetailSummary> detalles, List<DonationMovementSummary> movimientos) {
+            this(id,codigoTrazabilidad,fechaRegistro,fechaIngreso,estado,observaciones,donante,emergenciaId,
+                emergenciaNombre,centroAcopio,detalles,movimientos,null);
+        }
+    }
 
     public record PublicCollectionCenterSummary(String nombre, String ubicacion) {}
     public record PublicDonationDetailSummary(String recursoNombre, BigDecimal cantidadDonada,
                                               BigDecimal cantidadRecibidaAcopio, String unidadCodigo,
                                               String unidadNombre, String unidadSimbolo) {}
     public record PublicDonationMovementSummary(String estadoAnterior, String estadoNuevo,
-                                                LocalDateTime fechaHora, String ubicacion, String descripcion) {
+                                                LocalDateTime fechaHora, String ubicacion, String descripcion,
+                                                String recurso, String unidad, BigDecimal cantidadEnviada, BigDecimal cantidadRecibida,
+                                                CustodyDtos.Place origen, CustodyDtos.Place destino, String zona) {
+        public PublicDonationMovementSummary(String estadoAnterior,String estadoNuevo,LocalDateTime fechaHora,String ubicacion,String descripcion) {
+            this(estadoAnterior,estadoNuevo,fechaHora,ubicacion,descripcion,null,null,null,null,null,null,null);
+        }
         public PublicDonationMovementSummary(String estadoAnterior,String estadoNuevo,LocalDateTime fechaHora,String ubicacion) {
             this(estadoAnterior,estadoNuevo,fechaHora,ubicacion,"Movimiento registrado");
         }
@@ -66,5 +80,12 @@ public final class DonationDtos {
                                              LocalDateTime fechaIngreso, String estado,
                                              PublicCollectionCenterSummary centroAcopio,
                                              List<PublicDonationDetailSummary> detalles,
-                                             List<PublicDonationMovementSummary> movimientos) {}
+                                             List<PublicDonationMovementSummary> movimientos,
+                                             CustodyDtos.PublicCustody trazabilidad) {
+        public PublicDonationTraceResponse(String codigoTrazabilidad, LocalDateTime fechaRegistro,
+                LocalDateTime fechaIngreso, String estado, PublicCollectionCenterSummary centroAcopio,
+                List<PublicDonationDetailSummary> detalles, List<PublicDonationMovementSummary> movimientos) {
+            this(codigoTrazabilidad,fechaRegistro,fechaIngreso,estado,centroAcopio,detalles,movimientos,null);
+        }
+    }
 }

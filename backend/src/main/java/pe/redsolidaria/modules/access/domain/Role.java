@@ -27,6 +27,7 @@ public class Role {
     protected Role() {}
     public Role(String codigo, String nombre, String descripcion) { this.codigo = codigo; this.nombre = nombre; this.descripcion = descripcion; }
     public void asignar(Permission permiso) { asignaciones.add(new RolePermission(this, permiso)); }
+    public void actualizarDatos(String nombre, String descripcion) { this.nombre = nombre; this.descripcion = descripcion; }
     public void reemplazarPermisos(List<Permission> permisos) { asignaciones.clear(); permisos.forEach(this::asignar); }
     public Long getId() { return id; }
     public String getCodigo() { return codigo; }

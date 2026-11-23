@@ -4,10 +4,11 @@ import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
-import { BasicAuthService } from '../auth/basic-auth.service';
+import { SessionAuthService } from '../auth/session-auth.service';
 import { AppShellComponent } from '../shared/app-shell.component';
-import { DispatchRequest, DistributionCenter, LogisticsApiService, LogisticsStock, ReceiveRequest, Transfer } from './logistics-api.service';
-type Pending = { kind: 'dispatch'; request: DispatchRequest } | { kind: 'receive'; id: string; request: ReceiveRequest };
+import { Observable } from 'rxjs';
+import { DispatchRequest, DistributionCenter, LogisticsApiService, LogisticsStock, ReceiveRequest, Transfer, ResolutionRequest, TransferResolution } from './logistics-api.service';
+type Pending = { kind: 'dispatch'; request: DispatchRequest } | { kind: 'receive'; id: string; request: ReceiveRequest } | { kind: 'resolve'; id: string; request: ResolutionRequest };
 @Component({
   selector: 'app-logistics-page', standalone: true,
   imports: [AppShellComponent, FormsModule, RouterLink, DatePipe, DecimalPipe],
@@ -15,13 +16,15 @@ type Pending = { kind: 'dispatch'; request: DispatchRequest } | { kind: 'receive
 })
 export class LogisticsPageComponent implements OnInit {
   private readonly api = inject(LogisticsApiService);
-  private readonly auth = inject(BasicAuthService);
+  private readonly auth = inject(SessionAuthService);
   private readonly cd = inject(ChangeDetectorRef);
   centers: DistributionCenter[] = []; stock: LogisticsStock[] = []; transfers: Transfer[] = [];
   loading = false; saving = false; error: string | null = null; success: string | null = null;
   stockPage = 0; historyPage = 0;
   source: LogisticsStock | null = null; destination: number | null = null; quantity: number | null = null; notes = '';
   selectedTransfer: Transfer | null = null; received: number | null = null; receiptNotes = '';
+  resolutions: TransferResolution[] = []; resolutionTransfer: Transfer | null = null;
+  resolutionType = ''; resolutionReason = ''; resolutionEvidence = '';
   pending: Pending | null = null;
   private get storageKey() { return `red-solidaria.logistics.${this.auth.profile()?.correo}`; }
   ngOnInit() {
@@ -32,13 +35,20 @@ export class LogisticsPageComponent implements OnInit {
   load() {
     if (this.saving) return;
     this.loading = true;
-    forkJoin({ centers: this.api.centers(), stock: this.api.stock(this.stockPage), history: this.api.history(this.historyPage) })
+    forkJoin({ centers: this.api.centers(), stock: this.api.stock(this.stockPage), history: this.api.history(this.historyPage), resolutions: this.api.resolutions(this.historyPage) })
       .pipe(finalize(() => { this.loading = false; this.cd.markForCheck(); }))
-      .subscribe({ next: result => { this.centers = result.centers; this.stock = result.stock; this.transfers = result.history; },
+      .subscribe({ next: result => { this.centers = result.centers; this.stock = result.stock; this.transfers = result.history; this.resolutions = result.resolutions; },
         error: (error: HttpErrorResponse) => this.error = this.message(error) });
   }
   selectSource(source: LogisticsStock) { this.source = source; this.quantity = null; this.notes = ''; this.selectedTransfer = null; }
   selectTransfer(transfer: Transfer) { this.selectedTransfer = transfer; this.received = transfer.cantidadEnviada; this.receiptNotes = ''; this.source = null; }
+  resolutionFor(transfer: Transfer) { return this.resolutions.find(item => item.trasladoId === transfer.operacionId); }
+  selectResolution(transfer: Transfer) { this.resolutionTransfer = transfer; this.resolutionType = ''; this.resolutionReason = ''; this.resolutionEvidence = ''; this.source = null; this.selectedTransfer = null; }
+  resolve() {
+    if (this.pending || this.saving || !this.resolutionTransfer || !this.resolutionType || !this.resolutionReason.trim()) return;
+    this.prepare({ kind: 'resolve', id: this.resolutionTransfer.operacionId, request: { operacionId: crypto.randomUUID(),
+      tipo: this.resolutionType, motivo: this.resolutionReason.trim(), evidencia: this.resolutionEvidence.trim() } });
+  }
   dispatch() {
     if (this.pending || this.saving || !this.source || !this.destination || !this.valid(this.quantity, true)) return;
     this.prepare({ kind: 'dispatch', request: { operacionId: crypto.randomUUID(), detalleDonacionId: this.source.detalleDonacionId,
@@ -62,10 +72,11 @@ export class LogisticsPageComponent implements OnInit {
     if (!this.pending || this.saving) return;
     const pending = this.pending;
     this.saving = true; this.error = this.success = null;
-    const call = pending.kind === 'dispatch' ? this.api.dispatch(pending.request) : this.api.receive(pending.id, pending.request);
+    const call: Observable<unknown> = pending.kind === 'dispatch' ? this.api.dispatch(pending.request) : pending.kind === 'receive'
+      ? this.api.receive(pending.id, pending.request) : this.api.resolve(pending.id, pending.request);
     call.pipe(finalize(() => { this.saving = false; this.cd.markForCheck(); })).subscribe({
-      next: () => { sessionStorage.removeItem(this.storageKey); this.pending = null; this.source = null; this.selectedTransfer = null;
-        this.success = 'Operación confirmada. Existencias actualizadas.'; this.saving = false; this.load(); },
+      next: () => { sessionStorage.removeItem(this.storageKey); this.pending = null; this.source = null; this.selectedTransfer = null; this.resolutionTransfer = null;
+        this.success = pending.kind === 'resolve' ? 'Resolución documental registrada. Las existencias no se modificaron.' : 'Operación confirmada. Existencias actualizadas.'; this.saving = false; this.load(); },
       error: (error: HttpErrorResponse) => {
         if (error.status === 400 || error.status === 404 || error.status === 409) { sessionStorage.removeItem(this.storageKey); this.pending = null; }
         this.error = this.message(error);

@@ -51,6 +51,7 @@ class ResourceManagementServiceTest {
     void updatesFieldsAndChangesStateWithoutReplacingTheResource() {
         MeasurementUnit otherUnit = mock(MeasurementUnit.class);
         Resource resource = new Resource(unit, "Agua", "Bebidas", null, "ACTIVO");
+        when(resources.findByIdForUpdate(12L)).thenReturn(Optional.of(resource));
         when(resources.findById(12L)).thenReturn(Optional.of(resource));
         when(units.findById(8L)).thenReturn(Optional.of(otherUnit));
         when(resources.save(resource)).thenReturn(resource);
@@ -69,11 +70,14 @@ class ResourceManagementServiceTest {
     void refusesUnitChangesWhenQuantitiesAlreadyHaveHistory() {
         when(unit.getId()).thenReturn(7L);
         Resource resource = new Resource(unit, "Arroz", "Alimentos", null, "ACTIVO");
-        when(resources.findById(12L)).thenReturn(Optional.of(resource));
+        when(resources.findByIdForUpdate(12L)).thenReturn(Optional.of(resource));
         when(resources.historyCount(12L)).thenReturn(1L);
         assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.update(12L,
             new SaveResourceRequest("Arroz", "Alimentos", null, 8L))).getStatusCode().value());
         verify(resources, never()).save(any());
+        var order = inOrder(resources);
+        order.verify(resources).findByIdForUpdate(12L);
+        order.verify(resources).historyCount(12L);
     }
     @Test
     void returnsNotFoundWhenTheMeasurementUnitDoesNotExist() {

@@ -31,8 +31,11 @@ public class EmergencyManagementController {
     public EmergencyPageResponse list(@RequestParam(required = false) @Size(max = 150) String texto,
             @RequestParam(required = false) @Size(max = 30) String estado,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return service.list(texto, estado, page, size);
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            @RequestParam(required = false) java.time.LocalDate fechaDesde,
+            @RequestParam(required = false) java.time.LocalDate fechaHasta) {
+        return fechaDesde == null && fechaHasta == null ? service.list(texto, estado, page, size)
+                : service.list(texto, estado, page, size, fechaDesde, fechaHasta);
     }
 
     @GetMapping("/{id}")

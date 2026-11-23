@@ -1,3 +1,4 @@
+import { CsrfService } from '../auth/csrf.service';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -5,7 +6,7 @@ import { Component, Input } from '@angular/core';
 import { EmergencyBalanceComponent } from './emergency-balance.component';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { basicAuthInterceptor } from '../auth/basic-auth.interceptor';
+import { sessionInterceptor } from '../auth/session.interceptor';
 import { routes } from '../app.routes';
 import { EmergencyManagementPageComponent } from './emergency-management-page.component';
 
@@ -23,12 +24,14 @@ describe('EmergencyManagementPageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [EmergencyManagementPageComponent],
-      providers: [provideRouter(routes), provideHttpClient(withInterceptors([basicAuthInterceptor])), provideHttpClientTesting()],
+      providers: [provideRouter(routes), provideHttpClient(withInterceptors([sessionInterceptor])), provideHttpClientTesting()],
     }).overrideComponent(EmergencyManagementPageComponent, {
       remove: { imports: [EmergencyBalanceComponent] }, add: { imports: [BalanceStub] },
     }).compileComponents();
     fixture = TestBed.createComponent(EmergencyManagementPageComponent);
     http = TestBed.inject(HttpTestingController);
+    TestBed.inject(CsrfService).get().subscribe();
+    http.expectOne('/api/auth/csrf').flush({ headerName: 'X-CSRF-TOKEN', token: 'test-token' });
     fixture.autoDetectChanges();
   });
   afterEach(() => http.verify());
@@ -39,6 +42,17 @@ describe('EmergencyManagementPageComponent', () => {
     await fixture.whenStable();
     expect(fixture.componentInstance.loading).toBe(false);
     expect(fixture.nativeElement.textContent).toContain('No hay emergencias que coincidan');
+  });
+
+  it('applies start-date filters and rejects a reversed range', async () => {
+    http.expectOne('/api/admin/emergencias?page=0&size=20').flush(page);
+    await fixture.whenStable();
+    fixture.componentInstance.filterFrom = '2026-01-01'; fixture.componentInstance.filterTo = '2026-01-31';
+    fixture.componentInstance.load();
+    http.expectOne(request => request.url === '/api/admin/emergencias'
+      && request.params.get('fechaDesde') === '2026-01-01' && request.params.get('fechaHasta') === '2026-01-31').flush(page);
+    fixture.componentInstance.filterFrom = '2026-02-01'; fixture.componentInstance.load();
+    expect(fixture.componentInstance.error).toContain('fecha inicial');
   });
 
   it('creates an emergency with the submitted fields and refreshes the list', async () => {

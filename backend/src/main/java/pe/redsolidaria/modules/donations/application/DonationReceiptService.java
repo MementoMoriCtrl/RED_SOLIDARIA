@@ -145,7 +145,9 @@ public class DonationReceiptService {
                     expanded(itemRequest) ? itemRequest.examinada() : quantity,zero(itemRequest.noAceptada()),zero(itemRequest.excedente()),
                     itemRequest.cierre() || accumulated.compareTo(line.getCantidadDonada())>=0));
         }
-        boolean complete = lines.stream().allMatch(line -> line.getCantidadRecibidaAcopio().compareTo(line.getCantidadDonada()) >= 0);
+        // RECIBIDA means verification finished, not that all declared quantities arrived.
+        boolean complete = lines.stream().allMatch(line -> line.isCerrada()
+                || line.getCantidadRecibidaAcopio().compareTo(line.getCantidadDonada()) >= 0);
         if (plan.stream().anyMatch(entry -> entry.getValue().signum()>0)) donation.registrarIngresoSiFalta();
         String oldState = donation.getEstado();
         if (complete) donation.marcarRecibida();
@@ -298,6 +300,11 @@ public class DonationReceiptService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Excedente ya resuelto con otra operación");
             return json.readValue(operation.getRespuestaDecision(),RegisterReceiptResponse.class);
         }
+        boolean ownDonation=donation.getUsuarioRegistro().getId().equals(actor.getId());
+        boolean exceptionalMasterApproval=request.aprobar() && ownDonation && actor.esAdministradorMaestro();
+        if (request.aprobar() && ownDonation && !exceptionalMasterApproval)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Solo el administrador maestro puede aprobar excedentes de una donación propia");
         if (!pe.redsolidaria.modules.needs.application.NeedManagementService.USABLE_STATES.contains(donation.getEstado()))
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Estado de donación no habilitado");
         var original=json.readValue(operation.getRespuesta(),RegisterReceiptResponse.class);
@@ -315,7 +322,10 @@ public class DonationReceiptService {
         String action=request.aprobar() ? "AUTORIZACION_EXCEDENTE" : "RECHAZO_EXCEDENTE";
         var response=new RegisterReceiptResponse(donationId,donation.getEstado(),java.time.LocalDateTime.now(),null,null,result,actor.getId(),donation.getCentroAcopio().getId());
         operation.decidir(request.aprobar(),actor,request.operacionId().toString(),fingerprint,request.observaciones().trim(),json.writeValueAsString(response));
-        audit.saveAndFlush(new AuditRecord(actor,"DONACION",Long.toString(donationId),action,null,json.writeValueAsString(Map.of("recepcionId",receiptUuid,"solicitud",request,"resultado",response))));
+        audit.saveAndFlush(new AuditRecord(actor,"DONACION",Long.toString(donationId),action,null,json.writeValueAsString(Map.of(
+            "recepcionId",receiptUuid,"solicitud",request,"resultado",response,
+            "registradorId",donation.getUsuarioRegistro().getId(),"decisorId",actor.getId(),
+            "fechaDecision",operation.getFechaDecision(),"aprobacionPropiaExcepcionalMaestro",exceptionalMasterApproval))));
         movements.saveAndFlush(new DonationMovement(donation,actor,donation.getEstado(),donation.getEstado(),null,request.observaciones()).conTipo(action));
         return response;
     }

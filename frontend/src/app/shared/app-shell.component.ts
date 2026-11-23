@@ -1,6 +1,6 @@
 import { Component, Input, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { BasicAuthService } from '../auth/basic-auth.service';
+import { SessionAuthService } from '../auth/session-auth.service';
 
 @Component({
   selector: 'app-shell',
@@ -10,15 +10,18 @@ import { BasicAuthService } from '../auth/basic-auth.service';
   styleUrl: './app-shell.component.css',
 })
 export class AppShellComponent {
-  private readonly auth = inject(BasicAuthService);
+  private readonly auth = inject(SessionAuthService);
   private readonly router = inject(Router);
 
   get isAuthenticated(): boolean { return this.auth.state() === 'authenticated'; }
 
   cerrarSesion(): void {
-    this.auth.logout();
-    void this.router.navigateByUrl('/acceso-organizaciones', { replaceUrl: true });
+    this.auth.logout().subscribe({
+      next: () => void this.router.navigateByUrl('/acceso-organizaciones', { replaceUrl: true }),
+      error: () => { this.logoutError = 'No se pudo completar el cierre de sesión o renovar la protección de seguridad.'; },
+    });
   }
+  logoutError: string | null = null;
 
   @Input() breadcrumb = '';
   @Input() footerText = 'Red Solidaria';
