@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 import { MeasurementUnit, ResourceItem, SaveResourceRequest } from './resource.model';
 import { ResourceApiService } from './resource-api.service';
+import { RESOURCE_CATEGORIES } from '../shared/form-options';
 import { AppShellComponent } from '../shared/app-shell.component';
 
 interface ResourceForm {
@@ -26,6 +27,7 @@ export class ResourceManagementPageComponent implements OnInit {
   private readonly api = inject(ResourceApiService);
   private readonly changeDetector = inject(ChangeDetectorRef);
 
+  readonly categoryOptions = RESOURCE_CATEGORIES;
   resources: ResourceItem[] = [];
   units: MeasurementUnit[] = [];
   loading = true;

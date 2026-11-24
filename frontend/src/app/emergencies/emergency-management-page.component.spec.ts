@@ -77,6 +77,23 @@ describe('EmergencyManagementPageComponent', () => {
     expect(component.success).toContain('guardaron correctamente');
   });
 
+  it('validates and sends a custom emergency type', async () => {
+    http.expectOne('/api/admin/emergencias?page=0&size=20').flush(page);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+    component.newEmergency(); component.name = 'Caso'; component.startDate = '2026-06-01';
+    component.createState = 'En evaluación'; component.type = '__other__';
+    component.saveEmergency();
+    expect(component.error).toContain('obligatorios');
+    http.expectNone('/api/admin/emergencias');
+    component.customType = '  Evento especial  '; component.saveEmergency();
+    const request = http.expectOne('/api/admin/emergencias');
+    expect(request.request.body.tipo).toBe('Evento especial');
+    expect(request.request.body.estado).toBe('En evaluación');
+    request.flush({ ...detail, tipo: 'Evento especial', estado: 'En evaluación' });
+    http.expectOne('/api/admin/emergencias?page=0&size=20').flush(page);
+  });
+
   it('ends loading and presents a server error', async () => {
     http.expectOne('/api/admin/emergencias?page=0&size=20').flush({}, { status: 500, statusText: 'Server Error' });
     await fixture.whenStable();
@@ -121,6 +138,27 @@ describe('EmergencyManagementPageComponent', () => {
     http.expectOne('/api/admin/emergencias?page=0&size=20').flush(page);
     await fixture.whenStable();
     expect(component.selected?.estado).toBe('CERRADA');
+  });
+
+  it('shows allowed and historical states and submits the selected state', async () => {
+    http.expectOne('/api/admin/emergencias?page=0&size=20').flush(page);
+    const component = fixture.componentInstance;
+    component.editEmergency(detail);
+    http.expectOne('/api/admin/emergencias/4').flush(detail);
+    await fixture.whenStable(); fixture.detectChanges();
+    const select = fixture.nativeElement.querySelector('select[name="nextState"]') as HTMLSelectElement;
+    expect(Array.from(select.options).map(option => option.value)).toEqual(['', 'Activa', 'En evaluación', 'Completada', 'ACTIVA']);
+    expect(select.value).toBe('ACTIVA');
+    select.value = 'Completada'; select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    const form = select.closest('form')!;
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    const request = http.expectOne('/api/admin/emergencias/4/estado');
+    expect(request.request.body).toEqual({ estado: 'Completada' });
+    request.flush({ ...detail, estado: 'Completada' });
+    http.expectOne('/api/admin/emergencias?page=0&size=20').flush(page);
+    await fixture.whenStable();
+    expect(component.selected?.estado).toBe('Completada');
   });
 
   it('updates a zone under its emergency and reloads the detail', async () => {

@@ -14,7 +14,7 @@
           @for (resource of resources; track resource.id) { <option [ngValue]="resource.id">{{ resource.nombre }} ({{ resource.unidadMedida.codigo }})</option> }
         </select></label> }
         <label>Cantidad requerida<input name="quantity" type="number" [(ngModel)]="quantity" min="0.001" max="99999999999.999" step="0.001" required /></label>
-        <label>Prioridad<input name="priority" [(ngModel)]="priority" maxlength="30" required /></label>
+        <label>Prioridad<select name="priority" [(ngModel)]="priority" required><option value="">Selecciona una prioridad</option>@for (option of priorityOptions; track option) { <option [value]="option">{{ option }}</option> }@if (editing && priority && !priorityOptions.includes($any(priority))) { <option [value]="priority">{{ priority }}</option> }</select></label>
         <label>Observaciones<textarea name="observations" [(ngModel)]="observations" rows="2"></textarea></label>
         <button class="primary-button" type="submit" [disabled]="saving || loadingSources || needForm.invalid || (!editing && resources.length === 0)">{{ editing ? 'Guardar cambios' : 'Registrar necesidad' }}</button>
         @if (editing) { <button type="button" [disabled]="saving" (click)="cancelEdit()">Cancelar edición</button> }

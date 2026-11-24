@@ -4,6 +4,7 @@ import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
+import { EMERGENCY_TYPES, INITIAL_EMERGENCY_STATES } from '../shared/form-options';
 import { AppShellComponent } from '../shared/app-shell.component';
 import { EmergencyApiService } from './emergency-api.service';
 import { EmergencyBalanceComponent } from './emergency-balance.component';
@@ -18,6 +19,10 @@ import { AffectedZone, CreateEmergencyRequest, EmergencyDetail, EmergencyListIte
 export class EmergencyManagementPageComponent implements OnInit {
   private readonly api = inject(EmergencyApiService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  readonly emergencyTypes = EMERGENCY_TYPES;
+  readonly initialStates = INITIAL_EMERGENCY_STATES;
+  readonly stateOptions: readonly string[] = [...INITIAL_EMERGENCY_STATES, 'Completada'];
+  customType = '';
   emergencies: EmergencyListItem[] = [];
   selected: EmergencyDetail | null = null;
   page = 0; totalPages = 0; totalElements = 0; last = true;
@@ -49,7 +54,7 @@ export class EmergencyManagementPageComponent implements OnInit {
     if (this.saving || this.loadingDetail) return;
     this.selected = null; this.nextState = ''; this.resetZoneForm();
     this.editingId = null; this.name = this.type = this.description = this.startDate = this.endDate = this.createState = '';
-    this.formOpen = true; this.success = null; this.error = null;
+    this.customType = ''; this.formOpen = true; this.success = null; this.error = null;
   }
 
   editEmergency(item: EmergencyListItem): void {
@@ -60,7 +65,7 @@ export class EmergencyManagementPageComponent implements OnInit {
       this.loadingDetail = false; this.changeDetector.markForCheck();
     })).subscribe({
       next: (detail) => { this.selected = detail; this.editingId = detail.id; this.name = detail.nombre;
-        this.type = detail.tipo; this.description = detail.descripcion ?? ''; this.startDate = detail.fechaInicio;
+        this.setType(detail.tipo); this.description = detail.descripcion ?? ''; this.startDate = detail.fechaInicio;
         this.endDate = detail.fechaFin ?? ''; this.nextState = detail.estado; this.formOpen = true; this.resetZoneForm(); },
       error: (response: HttpErrorResponse) => { this.error = this.errorMessage(response); },
     });
@@ -70,7 +75,7 @@ export class EmergencyManagementPageComponent implements OnInit {
     if (this.saving || this.loadingDetail) return;
     const validation = this.validateEmergencyForm();
     if (validation) { this.error = validation; return; }
-    const payload: SaveEmergencyRequest = { nombre: this.name.trim(), tipo: this.type.trim(),
+    const payload: SaveEmergencyRequest = { nombre: this.name.trim(), tipo: this.effectiveType.trim(),
       descripcion: this.description.trim() || null, fechaInicio: this.startDate, fechaFin: this.endDate || null };
     this.saving = true; this.error = null;
     const request = this.editingId === null
@@ -78,7 +83,7 @@ export class EmergencyManagementPageComponent implements OnInit {
       : this.api.update(this.editingId, payload);
     request.pipe(finalize(() => { this.saving = false; this.changeDetector.markForCheck(); }))
       .subscribe({ next: (detail) => { this.selected = detail; this.editingId = detail.id;
-        this.name = detail.nombre; this.type = detail.tipo; this.description = detail.descripcion ?? '';
+        this.name = detail.nombre; this.setType(detail.tipo); this.description = detail.descripcion ?? '';
         this.startDate = detail.fechaInicio; this.endDate = detail.fechaFin ?? ''; this.nextState = detail.estado;
         this.success = 'Los datos de la emergencia se guardaron correctamente.'; this.load(this.page); },
         error: (response: HttpErrorResponse) => { this.error = this.errorMessage(response); } });
@@ -131,8 +136,13 @@ export class EmergencyManagementPageComponent implements OnInit {
       .subscribe({ next: (detail) => { this.selected = detail; }, error: (response: HttpErrorResponse) => { this.error = this.errorMessage(response); } });
   }
   private resetZoneForm(): void { this.zoneId = null; this.zoneName = this.zoneLocation = this.zoneDescription = ''; }
+  private get effectiveType(): string { return this.type === '__other__' ? this.customType : this.type; }
+  private setType(value: string): void {
+    if ((this.emergencyTypes as readonly string[]).includes(value)) { this.type = value; this.customType = ''; }
+    else { this.type = '__other__'; this.customType = value; }
+  }
   private validateEmergencyForm(): string | null {
-    if (!this.name.trim() || this.name.trim().length > 150 || !this.type.trim() || this.type.trim().length > 100 || !this.startDate)
+    if (!this.name.trim() || this.name.trim().length > 150 || !this.effectiveType.trim() || this.effectiveType.trim().length > 100 || !this.startDate)
       return 'Nombre, tipo y fecha de inicio son obligatorios.';
     if (this.endDate && this.endDate < this.startDate) return 'La fecha de fin debe ser igual o posterior a la fecha de inicio.';
     if (new TextEncoder().encode(this.description).length > 65535) return 'La descripción supera el límite permitido.';

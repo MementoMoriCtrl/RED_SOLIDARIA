@@ -37,7 +37,7 @@
             <input name="nombre" [(ngModel)]="form.nombre" maxlength="100" required autocomplete="off" />
           </label>
           <label>Categoría
-            <input name="categoria" [(ngModel)]="form.categoria" maxlength="100" required autocomplete="off" />
+            <select name="categoria" [(ngModel)]="form.categoria" required><option value="">Selecciona una categoría</option>@for (option of categoryOptions; track option) { <option [value]="option">{{ option }}</option> }@if (form.id !== null && form.categoria && !categoryOptions.includes($any(form.categoria))) { <option [value]="form.categoria">{{ form.categoria }}</option> }</select>
           </label>
           <label>Unidad de medida
             <select name="unidadMedidaId" [(ngModel)]="form.unidadMedidaId" required>

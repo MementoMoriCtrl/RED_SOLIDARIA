@@ -55,11 +55,12 @@
         <button class="text-button" type="button" [disabled]="saving || loadingDetail" (click)="closeForm()">Cerrar</button></div>
       <form class="emergency-form" (ngSubmit)="saveEmergency()">
         <label>Nombre<input name="name" [(ngModel)]="name" maxlength="150" required /></label>
-        <label>Tipo<input name="type" [(ngModel)]="type" maxlength="100" required /></label>
+        <label>Tipo<select name="type" [(ngModel)]="type" required><option value="">Selecciona un tipo</option>@for (option of emergencyTypes; track option) { <option [value]="option">{{ option }}</option> }<option value="__other__">Otro</option></select></label>
+        @if (type === '__other__') { <label>Especifica el tipo<input name="customType" [(ngModel)]="customType" maxlength="100" required /></label> }
         <label>Fecha de inicio<input name="startDate" type="date" [(ngModel)]="startDate" required /></label>
         <label>Fecha de fin<input name="endDate" type="date" [(ngModel)]="endDate" /></label>
         @if (editingId === null) {
-          <label>Estado inicial<input name="createState" [(ngModel)]="createState" maxlength="30" required /></label>
+          <label>Estado inicial<select name="createState" [(ngModel)]="createState" required><option value="">Selecciona un estado</option>@for (option of initialStates; track option) { <option [value]="option">{{ option }}</option> }</select></label>
         }
         <label class="wide">Descripción<textarea name="description" [(ngModel)]="description" rows="3"></textarea></label>
         <div class="form-actions wide"><button class="primary-button" type="submit" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar emergencia' }}</button></div>
@@ -82,8 +83,8 @@
           </form>
         </section>
         <section class="related-panel state-form" aria-labelledby="state-title">
-          <div><p class="eyebrow">SEGUIMIENTO</p><h3 id="state-title">Cambiar estado</h3><p class="muted">Ingresa el valor de estado utilizado por el sistema.</p></div>
-          <form (ngSubmit)="saveState()"><label>Estado<input name="nextState" [(ngModel)]="nextState" maxlength="30" required /></label>
+          <div><p class="eyebrow">SEGUIMIENTO</p><h3 id="state-title">Cambiar estado</h3><p class="muted">Selecciona el estado de la emergencia.</p></div>
+          <form (ngSubmit)="saveState()"><label>Estado<select name="nextState" [(ngModel)]="nextState" required><option value="">Selecciona un estado</option>@for (option of stateOptions; track option) { <option [value]="option">{{ option }}</option> }@if (selected.estado && !stateOptions.includes(selected.estado)) { <option [value]="selected.estado">{{ selected.estado }}</option> }</select></label>
             <button class="primary-button" type="submit" [disabled]="saving">{{ saving ? 'Guardando…' : 'Actualizar estado' }}</button></form>
         </section>
       }

@@ -7,6 +7,7 @@ import { finalize, forkJoin } from 'rxjs';
 import { EmergencyApiService } from '../emergencies/emergency-api.service';
 import { ResourceApiService } from '../resources/resource-api.service';
 import { ResourceItem } from '../resources/resource.model';
+import { NEED_PRIORITIES } from '../shared/form-options';
 import { AppShellComponent } from '../shared/app-shell.component';
 import { NeedApiService } from './need-api.service';
 import { DonationSource, NeedItem, ResultPage } from './need.model';
@@ -24,6 +25,7 @@ export class NeedManagementPageComponent implements OnInit {
   private readonly changeDetector = inject(ChangeDetectorRef);
   readonly emergencyId = Number(this.route.snapshot.paramMap.get('id'));
   readonly zoneId = Number(this.route.snapshot.paramMap.get('zoneId'));
+  readonly priorityOptions = NEED_PRIORITIES;
   title = ''; resources: ResourceItem[] = [];
   needs: ResultPage<NeedItem> = { content: [], totalElements: 0, totalPages: 0, page: 0 };
   sources: ResultPage<DonationSource> = { content: [], totalElements: 0, totalPages: 0, page: 0 };
