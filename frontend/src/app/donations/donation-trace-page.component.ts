@@ -14,6 +14,7 @@ import { DonationCustodyComponent } from './donation-custody.component';
   standalone: true,
   imports: [FormsModule, DatePipe, DecimalPipe, RouterLink, AppShellComponent, DonationCustodyComponent],
   templateUrl: './donation-trace-page.component.html',
+  styleUrl: './donation-trace-page.component.css',
 })
 export class DonationTracePageComponent {
   private readonly donationTrace = inject(DonationTraceService);

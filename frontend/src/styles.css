@@ -1,35 +1,477 @@
-@import "./app/donations/donation-trace-page.component.css";
-
 :root {
   color-scheme: light;
-  --navy: #092d69;
-  --blue: #2563eb;
-  --blue-hover: #1d4ed8;
-  --page-bg: #f1f5f9;
-  --surface: #ffffff;
-  --text: #18334f;
-  --muted: #64748b;
-  --green: #15803d;
-  --red: #b91c1c;
-  --amber: #d97706;
-  --border: #e2e8f0;
+
+  /* Institutional palette */
+  --color-navy: #092d69;
+  --color-blue: #2563eb;
+  --color-blue-hover: #1d4ed8;
+  --color-page: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-text: #18334f;
+  --color-text-muted: #64748b;
+  --color-border: #e2e8f0;
+
+  /* Feedback palette */
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+  --color-error: #b91c1c;
+  --color-error-bg: #fef2f2;
+  --color-error-border: #fecaca;
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-info-bg: #eff6ff;
+
+  /* Typography */
+  --font-family-base: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-size-xs: .69rem;
+  --font-size-sm: .78rem;
+  --font-size-base: .9rem;
+  --font-size-lg: 1.08rem;
+  --font-size-title: clamp(1.75rem, 3vw, 2.25rem);
+
+  /* Spacing */
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* Shape, elevation, and focus */
+  --radius-sm: 8px;
+  --radius-md: 9px;
+  --radius-lg: 13px;
+  --radius-pill: 999px;
+  --control-height: 42px;
+  --button-padding-inline: .9rem;
+  --button-padding-block: .6rem;
+  --shadow-panel: 0 3px 10px rgb(15 35 65 / 3%);
+  --shadow-card: 0 1px 3px rgb(15 35 65 / 3%);
+  --focus-ring: 0 0 0 3px rgb(37 99 235 / 13%);
+  --focus-outline: 3px solid rgb(37 99 235 / 35%);
+
+  /* Backward-compatible aliases used by existing module styles. */
+  --navy: var(--color-navy);
+  --blue: var(--color-blue);
+  --blue-hover: var(--color-blue-hover);
+  --page-bg: var(--color-page);
+  --surface: var(--color-surface);
+  --text: var(--color-text);
+  --muted: var(--color-text-muted);
+  --green: var(--color-success);
+  --red: var(--color-error);
+  --amber: var(--color-warning);
+  --border: var(--color-border);
 }
 
-* { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-html, body { min-height: 100%; background: var(--page-bg); }
+html,
+body {
+  min-height: 100%;
+  background: var(--page-bg);
+}
 
 body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
   color: var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-family-base);
   -webkit-font-smoothing: antialiased;
 }
 
-button, input { font: inherit; }
+button,
+input {
+  font: inherit;
+}
 
-app-donation-trace-page { display: block; min-height: 100vh; }
+app-donation-trace-page {
+  display: block;
+  min-height: 100vh;
+}
 
-:focus-visible { outline: 3px solid rgb(37 99 235 / 35%); outline-offset: 2px; }
+:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+/* Shared page content styles. These apply to projected content inside app-shell. */
+.org-login-link {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: .45rem .75rem;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--navy);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+.org-login-link:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.header-label,
+.eyebrow {
+  color: var(--muted);
+  font-size: .67rem;
+  font-weight: 750;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.intro { padding: 2.35rem 0 1.35rem; }
+.intro .eyebrow,
+.section-heading .eyebrow { margin: 0 0 .55rem; }
+.page-shell h1,
+.page-shell h2,
+.page-shell p { margin-top: 0; }
+.page-shell h1 {
+  margin-bottom: .6rem;
+  color: var(--text);
+  font-size: var(--font-size-title);
+  font-weight: 750;
+  letter-spacing: -.045em;
+  line-height: 1.15;
+}
+.page-shell h2 {
+  margin-bottom: 0;
+  color: var(--text);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  letter-spacing: -.015em;
+}
+.intro-copy {
+  max-width: 670px;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: .92rem;
+  line-height: 1.6;
+}
+
+.search-card,
+.panel {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+.search-card,
+.panel { padding: clamp(1rem, 2.5vw, 1.4rem); }
+.page-shell label,
+.page-shell dt { color: #475569; font-size: .76rem; font-weight: 700; }
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+  padding-bottom: .85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.alert {
+  margin-top: .85rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  color: var(--red);
+  font-size: .86rem;
+  line-height: 1.5;
+}
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgb(255 255 255 / 45%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.table-wrap table { width: 100%; border-collapse: collapse; text-align: left; }
+.table-wrap th,
+.table-wrap td {
+  padding: .78rem .75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: .8rem;
+  white-space: nowrap;
+}
+.table-wrap thead th {
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 750;
+  letter-spacing: .035em;
+}
+.table-wrap tbody tr:last-child th,
+.table-wrap tbody tr:last-child td { border-bottom: 0; }
+.table-wrap tbody tr:hover { background: #f8fbff; }
+.table-wrap tbody th { color: var(--text); font-weight: 650; }
+.table-wrap td { color: #475569; }
+
+/* Shared administrative controls. Local component styles keep only layout-specific exceptions. */
+.page-shell button {
+  display: inline-flex;
+  min-height: var(--control-height);
+  align-items: center;
+  justify-content: center;
+  padding: var(--button-padding-block) var(--button-padding-inline);
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.page-shell button:hover:not(:disabled) { border-color: #94a3b8; background: #f8fafc; }
+.page-shell button:active:not(:disabled) { background: #f1f5f9; }
+.page-shell button:focus-visible { outline: var(--focus-outline); outline-offset: 2px; }
+.page-shell button:disabled,
+.page-shell fieldset:disabled button { cursor: not-allowed; opacity: .55; }
+
+.page-shell .primary-button,
+.page-shell .donation-primary {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+.page-shell .primary-button:hover:not(:disabled),
+.page-shell .donation-primary:hover:not(:disabled) {
+  border-color: var(--blue-hover);
+  background: var(--blue-hover);
+}
+.page-shell .primary-button:active:not(:disabled),
+.page-shell .donation-primary:active:not(:disabled) { background: var(--blue-hover); }
+.page-shell .login-form button { border-color: var(--blue); background: var(--blue); color: #fff; }
+.page-shell .login-form button:hover:not(:disabled) { border-color: var(--blue-hover); background: var(--blue-hover); }
+.page-shell .secondary-button { border-color: #cbd5e1; background: #fff; color: var(--navy); }
+.page-shell .secondary-button:hover:not(:disabled) { background: #f8fafc; }
+.page-shell .danger-button { border-color: var(--color-error); background: var(--color-error); color: #fff; }
+.page-shell .danger-button:hover:not(:disabled) { border-color: #991b1b; background: #991b1b; }
+.page-shell .success-button { border-color: var(--color-success); background: var(--color-success); color: #fff; }
+.page-shell .success-button:hover:not(:disabled) { border-color: #166534; background: #166534; }
+.page-shell .text-button,
+.page-shell .link-button {
+  min-height: 36px;
+  padding: .35rem .5rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--blue-hover);
+}
+.page-shell .text-button:hover:not(:disabled),
+.page-shell .link-button:hover:not(:disabled) { border-color: transparent; background: var(--color-info-bg); }
+
+.page-shell label {
+  display: grid;
+  min-width: 0;
+  gap: .4rem;
+  color: #475569;
+  font-size: .76rem;
+  font-weight: 700;
+}
+.page-shell input:not([type="checkbox"]):not([type="radio"]),
+.page-shell select,
+.page-shell textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: var(--button-padding-block) .75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: .85rem;
+  line-height: 1.4;
+}
+.page-shell textarea { resize: vertical; }
+.page-shell input::placeholder,
+.page-shell textarea::placeholder { color: #94a3b8; }
+.page-shell input:focus,
+.page-shell select:focus,
+.page-shell textarea:focus { border-color: var(--blue); }
+.page-shell input:disabled,
+.page-shell select:disabled,
+.page-shell textarea:disabled,
+.page-shell fieldset:disabled input,
+.page-shell fieldset:disabled select,
+.page-shell fieldset:disabled textarea { background: #f1f5f9; color: var(--muted); }
+.page-shell input:read-only,
+.page-shell textarea:read-only { background: #f8fafc; color: var(--muted); }
+.page-shell input.ng-invalid.ng-touched,
+.page-shell select.ng-invalid.ng-touched,
+.page-shell textarea.ng-invalid.ng-touched { border-color: var(--color-error); }
+
+.page-shell table { width: 100%; border-collapse: collapse; text-align: left; }
+.page-shell th,
+.page-shell td {
+  padding: .78rem .75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.page-shell th {
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.page-shell td { color: #475569; font-size: .85rem; }
+.page-shell tbody tr:hover { background: #f8fbff; }
+.page-shell tbody tr:last-child th,
+.page-shell tbody tr:last-child td { border-bottom: 0; }
+
+.page-shell .table-scroll,
+.page-shell .verification-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+/* Consistent feedback surfaces while retaining each page's semantic class. */
+.notice,
+.success-message,
+.success-alert,
+.success-notice,
+.donation-success {
+  margin-block: .85rem;
+  padding: .8rem 1rem;
+  border: 1px solid var(--color-success-border);
+  border-radius: var(--radius-md);
+  background: var(--color-success-bg);
+  color: #166534;
+  font-size: .84rem;
+  line-height: 1.5;
+}
+.donation-notice,
+.donation-loading,
+.resource-notice:not(.success-notice) {
+  margin-block: .85rem;
+  padding: .8rem 1rem;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-md);
+  background: var(--color-info-bg);
+  color: var(--navy);
+  font-size: .84rem;
+  line-height: 1.5;
+}
+.info-message { border-color: #bfdbfe; background: var(--color-info-bg); color: var(--navy); }
+.warning-message,
+.confirmation { border-left: 4px solid var(--color-warning); }
+
+.resource-empty,
+.donation-empty,
+.audit-state.empty,
+.state-panel.empty,
+.empty-state {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: var(--muted);
+}
+
+/* Shared authentication form styles used by the organization access page. */
+.login-form { display: grid; max-width: 440px; gap: .7rem; }
+.login-form h2 { margin-bottom: .2rem; }
+.login-form input { width: 100%; }
+.login-form button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: .65rem 1rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--blue);
+  color: #fff;
+  cursor: pointer;
+  font-size: .84rem;
+  font-weight: 700;
+}
+.login-form button:hover { background: var(--blue-hover); }
+.auth-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+.auth-status p { margin: 0; color: #475569; font-size: .85rem; }
+.auth-status.auth-pending p { color: #92400e; }
+.auth-status.auth-pending {
+  padding: .8rem .9rem;
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  color: #92400e;
+  font-size: .84rem;
+}
+.logout-button,
+.search-card .secondary-button {
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+  font-size: .82rem;
+  font-weight: 700;
+}
+.logout-button { margin-top: .8rem; padding: .6rem .85rem; }
+.logout-button:hover:not(:disabled),
+.search-card .secondary-button:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #061f4b;
+}
+.logout-button:active:not(:disabled),
+.search-card .secondary-button:active:not(:disabled) { background: #f1f5f9; }
+.logout-button:focus-visible,
+.search-card .secondary-button:focus-visible { outline-color: rgb(9 45 105 / 28%); }
+.login-explanation {
+  max-width: 700px;
+  margin-bottom: 1.1rem;
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.6;
+}
+.login-panel { max-width: 720px; }
+
+@media (max-width: 480px) {
+  .org-login-link { padding-inline: .55rem; font-size: .7rem; }
+  .header-label { display: none; }
+  .section-heading { align-items: flex-start; }
+  .table-wrap th,
+  .table-wrap td { padding: .7rem .6rem; }
+  .auth-status { align-items: stretch; flex-direction: column; }
+  .auth-status .secondary-button,
+  .auth-status .logout-button { width: 100%; }
+}
