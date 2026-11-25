@@ -48,6 +48,7 @@ class NeedManagementServiceTest {
         var need = spy(new Need(zone, resource, BigDecimal.TEN, "ALTA", null));
         when(need.getId()).thenReturn(4L); when(needs.findByIdForUpdate(4L)).thenReturn(Optional.of(need));
         when(lines.assignedToNeed(4L)).thenReturn(BigDecimal.TEN);
+        when(lines.sourcesWithPendingReservations(4L)).thenReturn(List.of());
         when(users.findByCorreo("admin")).thenReturn(Optional.of(mock(UserAccount.class)));
         return need;
     }
@@ -60,7 +61,7 @@ class NeedManagementServiceTest {
         when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.TEN);
         assertEquals("CERRADA", service.transition(1, 2, 4, "admin", "CERRADA", request).estado());
         var record = ArgumentCaptor.forClass(AuditRecord.class); verify(audit).saveAndFlush(record.capture());
-        assertEquals("TRANSICION_NECESIDAD", record.getValue().getAccion());
+        assertEquals("CIERRE_MANUAL_NECESIDAD", record.getValue().getAccion());
         assertTrue(record.getValue().getDatosAnteriores().contains("PENDIENTE"));
         assertTrue(record.getValue().getDatosNuevos().contains("cumplida"));
         assertThrows(ResponseStatusException.class, () -> service.update(1, 2, 4, "admin", new UpdateNeedRequest(BigDecimal.TEN, "ALTA", null)));
@@ -76,6 +77,46 @@ class NeedManagementServiceTest {
         assertEquals("CANCELADA", service.transition(1, 2, 4, "admin", "CANCELADA", request).estado());
         assertThrows(ResponseStatusException.class, () -> service.transition(1, 2, 4, "admin", "CERRADA", request));
         verify(lines, never()).saveAndFlush(any());
+    }
+
+    @Test void manualCloseRejectsPendingReservationsEvenWhenTotalsAreComplete() {
+        var need = transitionFixture();
+        when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.TEN);
+        when(lines.sourcesWithPendingReservations(4L)).thenReturn(List.of(5L));
+
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.transition(1, 2, 4, "admin",
+                "CERRADA", new TransitionNeedRequest("cierre manual"))).getStatusCode().value());
+        assertEquals("PENDIENTE", need.getEstado());
+        verifyNoInteractions(audit);
+    }
+
+    @Test void cancellationRejectsFullyDeliveredNeedEvenIfLegacyStateIsPending() {
+        var need = transitionFixture();
+        when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.TEN);
+
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.transition(1, 2, 4, "admin",
+                "CANCELADA", new TransitionNeedRequest("cancelación"))).getStatusCode().value());
+        assertEquals("PENDIENTE", need.getEstado());
+        verifyNoInteractions(audit);
+    }
+
+    @Test void legacyPendingNeedWithCompleteAndUnreservedTotalsIsPresentedAsClosedWithoutDatabaseWrite() {
+        var need = transitionFixture();
+        when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.TEN);
+        var response = service.response(need);
+
+        assertEquals("CERRADA", response.estado());
+        assertEquals("PENDIENTE", need.getEstado());
+        verify(needs, never()).saveAndFlush(any());
+        verifyNoInteractions(audit);
+    }
+
+    @Test void pendingReservationsKeepLegacyNeedPendingInResponse() {
+        var need = transitionFixture();
+        when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.TEN);
+        when(lines.sourcesWithPendingReservations(4L)).thenReturn(List.of(5L));
+
+        assertEquals("PENDIENTE", service.response(need).estado());
     }
 
     @Test void registersNeedWithAuditAndKeepsReceivedSeparateFromDelivered() {
@@ -122,6 +163,8 @@ class NeedManagementServiceTest {
         when(emergency.getId()).thenReturn(1L);
         when(need.getRecurso()).thenReturn(resource);
         when(need.getEstado()).thenReturn("PENDIENTE");
+        when(need.getId()).thenReturn(4L);
+        when(need.getCantidadRequerida()).thenReturn(BigDecimal.TEN);
         when(resource.getId()).thenReturn(3L);
         when(resource.getEstado()).thenReturn("ACTIVO");
         when(donations.findSources(1L, 3L, PageRequest.of(0, 20))).thenReturn(new PageImpl<>(List.of(source)));
@@ -132,8 +175,10 @@ class NeedManagementServiceTest {
         when(lines.distributionAssigned(5L)).thenReturn(new BigDecimal("5"));
         when(donation.getEstado()).thenReturn("REGISTRADA");
         when(lines.assignedToDonation(5L)).thenReturn(new BigDecimal("5"));
+        when(lines.assignedToNeed(4L)).thenReturn(new BigDecimal("5"));
         when(lines.assignedToPair(4L, 5L)).thenReturn(new BigDecimal("3"));
         when(lines.deliveredToPair(4L, 5L)).thenReturn(BigDecimal.ONE);
+        when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.ONE);
         var response = service.sources(4, 0).content().getFirst();
         assertEquals(new BigDecimal("2"), response.disponible());
         assertEquals(BigDecimal.ONE, response.entregadaNecesidad());
@@ -176,6 +221,7 @@ class NeedManagementServiceTest {
         var need = new Need(zone, mock(Resource.class), BigDecimal.TEN, "ALTA", null);
         when(needs.findByIdForUpdate(4L)).thenReturn(Optional.of(need));
         when(lines.assignedToNeed(4L)).thenReturn(new BigDecimal("4"));
+        when(lines.deliveredToNeed(4L)).thenReturn(BigDecimal.ZERO);
         var request = new UpdateNeedRequest(new BigDecimal("3"), "BAJA", null);
         assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.update(1, 2, 4, "admin", request)).getStatusCode().value());
         assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.update(1, 99, 4, "admin", request)).getStatusCode().value());

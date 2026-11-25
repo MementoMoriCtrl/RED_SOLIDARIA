@@ -3,7 +3,7 @@
 .state-panel { display: flex; align-items: center; gap: .7rem; margin-top: 1rem; color: var(--muted); }
 .state-panel.empty { display: block; }.state-panel h2 { margin: 0 0 .4rem; color: var(--navy); }.state-panel p { margin: 0; }
 .table-wrap { margin-top: 1rem; overflow-x: auto; padding: 0; }
-.status-chip { display: inline-flex; padding: .3rem .55rem; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: .7rem; font-weight: 750; }
+.status-chip { display: inline-flex; padding: .3rem .55rem; border-radius: 999px; background: var(--color-info-bg); color: var(--blue-hover); font-size: .7rem; font-weight: 750; }
 .pagination { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: .85rem; color: var(--muted); font-size: .8rem; }
 .pagination div { display: flex; align-items: center; gap: .65rem; }
 .emergency-form-panel { margin-top: 1rem; }.panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }

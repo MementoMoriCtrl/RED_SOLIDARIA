@@ -13,4 +13,4 @@ export interface ResultPage<T> { content: T[]; totalElements: number; totalPages
 export interface CreateNeedRequest { recursoId: number; cantidad: number; prioridad: string; observaciones: string | null; }
 export interface UpdateNeedRequest { cantidad: number; prioridad: string; observaciones: string | null; }
 export interface SaveDeliveryRequest { totalAsignado: number; totalEntregado: number; }
-export interface DeliveryResult { entregaId: number | null; totalAsignado: number; totalEntregado: number; repetida: boolean; }
+export interface DeliveryResult { entregaId: number | null; totalAsignado: number; totalEntregado: number; repetida: boolean; estadoNecesidad: string; }

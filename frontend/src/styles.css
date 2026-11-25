@@ -2,26 +2,57 @@
   color-scheme: light;
 
   /* Institutional palette */
-  --color-navy: #092d69;
-  --color-blue: #2563eb;
-  --color-blue-hover: #1d4ed8;
-  --color-page: #f1f5f9;
+  --color-navy: #173b68;
+  --color-blue: #2878c8;
+  --color-blue-hover: #1f65a8;
+  --color-page: #f3f6fa;
   --color-surface: #ffffff;
-  --color-text: #18334f;
+  --color-text: #243b53;
   --color-text-muted: #64748b;
-  --color-border: #e2e8f0;
+  --color-border: #dbe3ec;
+  --color-border-strong: #cbd5e1;
+  --color-border-hover: #94a3b8;
+  --color-text-subtle: #475569;
 
   /* Feedback palette */
-  --color-success: #15803d;
-  --color-success-bg: #f0fdf4;
-  --color-success-border: #bbf7d0;
-  --color-error: #b91c1c;
-  --color-error-bg: #fef2f2;
-  --color-error-border: #fecaca;
-  --color-warning: #d97706;
-  --color-warning-bg: #fffbeb;
-  --color-warning-border: #fde68a;
-  --color-info-bg: #eff6ff;
+  --color-success: #16a085;
+  --color-success-dark: #0f766e;
+  --color-success-deep: #115e59;
+  --color-success-bg: #e8f6f2;
+  --color-success-border: #b9e7da;
+  --color-error: #dc5555;
+  --color-error-dark: #b94343;
+  --color-error-deep: #9f3434;
+  --color-error-bg: #fdf0f0;
+  --color-error-border: #f3caca;
+  --color-warning: #e9a23b;
+  --color-warning-dark: #8a5b14;
+  --color-warning-bg: #fff6e8;
+  --color-warning-border: #f4d6a6;
+  --color-info-bg: #eaf3fc;
+  --color-info-border: #c6def4;
+  --color-info-hover: #e1effb;
+  /* Status badge palette is kept separate from action and feedback colors. */
+  --status-blue: #2878c8;
+  --status-blue-dark: #1d5f9e;
+  --status-blue-bg: #e8f2fc;
+  --status-amber: #a66a0a;
+  --status-amber-dark: #704500;
+  --status-amber-bg: #fff4db;
+  --status-green: #13856f;
+  --status-green-dark: #0f6555;
+  --status-green-bg: #e3f5ef;
+  --status-purple: #7955b5;
+  --status-purple-dark: #59388d;
+  --status-purple-bg: #f0eafe;
+  --status-red: #c74747;
+  --status-red-dark: #852d2d;
+  --status-red-hover: #ad3e3e;
+  --status-red-bg: #fceaea;
+  --color-neutral-bg: #f1f4f8;
+  --color-disabled-bg: #f1f4f8;
+  --color-row-hover: #f5f9fd;
+  --color-placeholder: #8a9bad;
 
   /* Typography */
   --font-family-base: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -50,8 +81,8 @@
   --button-padding-block: .6rem;
   --shadow-panel: 0 3px 10px rgb(15 35 65 / 3%);
   --shadow-card: 0 1px 3px rgb(15 35 65 / 3%);
-  --focus-ring: 0 0 0 3px rgb(37 99 235 / 13%);
-  --focus-outline: 3px solid rgb(37 99 235 / 35%);
+  --focus-ring: 0 0 0 3px rgb(40 120 200 / 16%);
+  --focus-outline: 3px solid rgb(40 120 200 / 38%);
 
   /* Backward-compatible aliases used by existing module styles. */
   --navy: var(--color-navy);
@@ -110,7 +141,7 @@ app-donation-trace-page {
   align-items: center;
   justify-content: center;
   padding: .45rem .75rem;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--color-info-border);
   border-radius: var(--radius-sm);
   background: #fff;
   color: var(--navy);
@@ -121,8 +152,8 @@ app-donation-trace-page {
 }
 
 .org-login-link:hover {
-  border-color: #93c5fd;
-  background: #eff6ff;
+  border-color: var(--color-blue);
+  background: var(--color-info-bg);
 }
 
 .header-label,
@@ -142,19 +173,34 @@ app-donation-trace-page {
 .page-shell p { margin-top: 0; }
 .page-shell h1 {
   margin-bottom: .6rem;
-  color: var(--text);
+  color: var(--navy);
   font-size: var(--font-size-title);
   font-weight: 750;
   letter-spacing: -.045em;
   line-height: 1.15;
 }
 .page-shell h2 {
-  margin-bottom: 0;
-  color: var(--text);
+  margin-bottom: var(--space-3);
+  color: var(--navy);
   font-size: var(--font-size-lg);
   font-weight: 700;
   letter-spacing: -.015em;
 }
+.panel-title,
+.panel-subtitle { margin: 0 0 var(--space-3); color: var(--navy); }
+.panel-title { font-size: var(--font-size-lg); font-weight: 700; line-height: 1.35; }
+.panel-subtitle { font-size: .95rem; font-weight: 650; line-height: 1.4; }
+.panel-description {
+  max-width: 78ch;
+  margin: 0 0 var(--space-4);
+  color: var(--muted);
+  font-size: var(--font-size-base);
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+.panel-copy > * + * { margin-top: var(--space-3); }
+.panel-copy ul,
+.panel-copy ol { padding-inline-start: 1.35rem; margin-block: var(--space-3) var(--space-4); line-height: 1.65; }
 .intro-copy {
   max-width: 670px;
   margin-bottom: 0;
@@ -162,6 +208,48 @@ app-donation-trace-page {
   font-size: .92rem;
   line-height: 1.6;
 }
+
+/* Shared badge geometry and semantic colors. The shell and badge selectors intentionally
+   outrank component-scoped state rules such as .state.active and .status-badge.is-pending. */
+app-shell .page-shell :is(.status-chip, .status-badge, .donation-status, .resource-status, .state, .custody-status) {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: .3rem .58rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: 750;
+  line-height: 1.35;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+app-shell .page-shell :is(.status-chip, .status-badge, .donation-status, .resource-status, .state, .custody-status).status--blue { background: var(--status-blue-bg); color: var(--status-blue-dark); }
+app-shell .page-shell :is(.status-chip, .status-badge, .donation-status, .resource-status, .state, .custody-status).status--amber { background: var(--status-amber-bg); color: var(--status-amber-dark); }
+app-shell .page-shell :is(.status-chip, .status-badge, .donation-status, .resource-status, .state, .custody-status).status--green { background: var(--status-green-bg); color: var(--status-green-dark); }
+app-shell .page-shell :is(.status-chip, .status-badge, .donation-status, .resource-status, .state, .custody-status).status--purple { background: var(--status-purple-bg); color: var(--status-purple-dark); }
+app-shell .page-shell :is(.status-chip, .status-badge, .donation-status, .resource-status, .state, .custody-status).status--red { background: var(--status-red-bg); color: var(--status-red-dark); }
+
+/* Shared destructive action used in both shell logout locations. */
+app-shell .page-shell .session-button,
+app-shell .sidebar .session-button {
+  min-height: 42px;
+  padding: .6rem .85rem;
+  border: 1px solid var(--status-red);
+  border-radius: var(--radius-sm);
+  background: var(--status-red);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 700;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+app-shell .page-shell .session-button:hover:not(:disabled),
+app-shell .sidebar .session-button:hover:not(:disabled) { border-color: var(--status-red-hover); background: var(--status-red-hover); }
+app-shell .page-shell .session-button:focus-visible,
+app-shell .sidebar .session-button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 5px var(--color-navy); }
+app-shell .page-shell .session-button:disabled,
+app-shell .sidebar .session-button:disabled { border-color: var(--color-border); background: var(--color-disabled-bg); color: var(--color-text-muted); cursor: not-allowed; opacity: 1; }
 
 .search-card,
 .panel {
@@ -174,7 +262,7 @@ app-donation-trace-page {
 .search-card,
 .panel { padding: clamp(1rem, 2.5vw, 1.4rem); }
 .page-shell label,
-.page-shell dt { color: #475569; font-size: .76rem; font-weight: 700; }
+.page-shell dt { color: var(--color-text-subtle); font-size: .76rem; font-weight: 700; }
 .section-heading {
   display: flex;
   align-items: center;
@@ -219,7 +307,7 @@ app-donation-trace-page {
   white-space: nowrap;
 }
 .table-wrap thead th {
-  background: #f8fafc;
+  background: var(--color-neutral-bg);
   color: var(--muted);
   font-size: var(--font-size-xs);
   font-weight: 750;
@@ -227,9 +315,9 @@ app-donation-trace-page {
 }
 .table-wrap tbody tr:last-child th,
 .table-wrap tbody tr:last-child td { border-bottom: 0; }
-.table-wrap tbody tr:hover { background: #f8fbff; }
+.table-wrap tbody tr:hover { background: var(--color-row-hover); }
 .table-wrap tbody th { color: var(--text); font-weight: 650; }
-.table-wrap td { color: #475569; }
+.table-wrap td { color: var(--color-text-subtle); }
 
 /* Shared administrative controls. Local component styles keep only layout-specific exceptions. */
 .page-shell button {
@@ -238,7 +326,7 @@ app-donation-trace-page {
   align-items: center;
   justify-content: center;
   padding: var(--button-padding-block) var(--button-padding-inline);
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background: #fff;
   color: var(--navy);
@@ -249,8 +337,8 @@ app-donation-trace-page {
   line-height: 1.2;
   transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
 }
-.page-shell button:hover:not(:disabled) { border-color: #94a3b8; background: #f8fafc; }
-.page-shell button:active:not(:disabled) { background: #f1f5f9; }
+.page-shell button:hover:not(:disabled) { border-color: var(--color-border-hover); background: var(--color-neutral-bg); }
+.page-shell button:active:not(:disabled) { background: var(--color-disabled-bg); }
 .page-shell button:focus-visible { outline: var(--focus-outline); outline-offset: 2px; }
 .page-shell button:disabled,
 .page-shell fieldset:disabled button { cursor: not-allowed; opacity: .55; }
@@ -270,12 +358,12 @@ app-donation-trace-page {
 .page-shell .donation-primary:active:not(:disabled) { background: var(--blue-hover); }
 .page-shell .login-form button { border-color: var(--blue); background: var(--blue); color: #fff; }
 .page-shell .login-form button:hover:not(:disabled) { border-color: var(--blue-hover); background: var(--blue-hover); }
-.page-shell .secondary-button { border-color: #cbd5e1; background: #fff; color: var(--navy); }
-.page-shell .secondary-button:hover:not(:disabled) { background: #f8fafc; }
-.page-shell .danger-button { border-color: var(--color-error); background: var(--color-error); color: #fff; }
-.page-shell .danger-button:hover:not(:disabled) { border-color: #991b1b; background: #991b1b; }
-.page-shell .success-button { border-color: var(--color-success); background: var(--color-success); color: #fff; }
-.page-shell .success-button:hover:not(:disabled) { border-color: #166534; background: #166534; }
+.page-shell .secondary-button { border-color: var(--color-border-strong); background: #fff; color: var(--navy); }
+.page-shell .secondary-button:hover:not(:disabled) { background: var(--color-neutral-bg); }
+.page-shell .danger-button { border-color: var(--color-error-dark); background: var(--color-error-dark); color: #fff; }
+.page-shell .danger-button:hover:not(:disabled) { border-color: var(--color-error-deep); background: var(--color-error-deep); }
+.page-shell .success-button { border-color: var(--color-success-dark); background: var(--color-success-dark); color: #fff; }
+.page-shell .success-button:hover:not(:disabled) { border-color: var(--color-success-deep); background: var(--color-success-deep); }
 .page-shell .text-button,
 .page-shell .link-button {
   min-height: 36px;
@@ -291,7 +379,7 @@ app-donation-trace-page {
   display: grid;
   min-width: 0;
   gap: .4rem;
-  color: #475569;
+  color: var(--color-text-subtle);
   font-size: .76rem;
   font-weight: 700;
 }
@@ -302,7 +390,7 @@ app-donation-trace-page {
   min-width: 0;
   min-height: var(--control-height);
   padding: var(--button-padding-block) .75rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background: #fff;
   color: var(--text);
@@ -312,7 +400,7 @@ app-donation-trace-page {
 }
 .page-shell textarea { resize: vertical; }
 .page-shell input::placeholder,
-.page-shell textarea::placeholder { color: #94a3b8; }
+.page-shell textarea::placeholder { color: var(--color-placeholder); }
 .page-shell input:focus,
 .page-shell select:focus,
 .page-shell textarea:focus { border-color: var(--blue); }
@@ -321,9 +409,9 @@ app-donation-trace-page {
 .page-shell textarea:disabled,
 .page-shell fieldset:disabled input,
 .page-shell fieldset:disabled select,
-.page-shell fieldset:disabled textarea { background: #f1f5f9; color: var(--muted); }
+.page-shell fieldset:disabled textarea { background: var(--color-disabled-bg); color: var(--muted); }
 .page-shell input:read-only,
-.page-shell textarea:read-only { background: #f8fafc; color: var(--muted); }
+.page-shell textarea:read-only { background: var(--color-neutral-bg); color: var(--muted); }
 .page-shell input.ng-invalid.ng-touched,
 .page-shell select.ng-invalid.ng-touched,
 .page-shell textarea.ng-invalid.ng-touched { border-color: var(--color-error); }
@@ -337,15 +425,15 @@ app-donation-trace-page {
   white-space: nowrap;
 }
 .page-shell th {
-  background: #f8fafc;
+  background: var(--color-neutral-bg);
   color: var(--muted);
   font-size: var(--font-size-xs);
   font-weight: 750;
   letter-spacing: .04em;
   text-transform: uppercase;
 }
-.page-shell td { color: #475569; font-size: .85rem; }
-.page-shell tbody tr:hover { background: #f8fbff; }
+.page-shell td { color: var(--color-text-subtle); font-size: .85rem; }
+.page-shell tbody tr:hover { background: var(--color-row-hover); }
 .page-shell tbody tr:last-child th,
 .page-shell tbody tr:last-child td { border-bottom: 0; }
 
@@ -368,7 +456,7 @@ app-donation-trace-page {
   border: 1px solid var(--color-success-border);
   border-radius: var(--radius-md);
   background: var(--color-success-bg);
-  color: #166534;
+  color: var(--color-success-dark);
   font-size: .84rem;
   line-height: 1.5;
 }
@@ -377,14 +465,14 @@ app-donation-trace-page {
 .resource-notice:not(.success-notice) {
   margin-block: .85rem;
   padding: .8rem 1rem;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--color-info-border);
   border-radius: var(--radius-md);
   background: var(--color-info-bg);
   color: var(--navy);
   font-size: .84rem;
   line-height: 1.5;
 }
-.info-message { border-color: #bfdbfe; background: var(--color-info-bg); color: var(--navy); }
+.info-message { border-color: var(--color-info-border); background: var(--color-info-bg); color: var(--navy); }
 .warning-message,
 .confirmation { border-left: 4px solid var(--color-warning); }
 
@@ -393,8 +481,8 @@ app-donation-trace-page {
 .audit-state.empty,
 .state-panel.empty,
 .empty-state {
-  border-color: #cbd5e1;
-  background: #f8fafc;
+  border-color: var(--color-border-strong);
+  background: var(--color-neutral-bg);
   color: var(--muted);
 }
 
@@ -425,19 +513,19 @@ app-donation-trace-page {
   margin-bottom: 1.1rem;
 }
 .auth-status p { margin: 0; color: #475569; font-size: .85rem; }
-.auth-status.auth-pending p { color: #92400e; }
+.auth-status.auth-pending p { color: var(--color-warning-dark); }
 .auth-status.auth-pending {
   padding: .8rem .9rem;
   border: 1px solid var(--color-warning-border);
   border-radius: var(--radius-md);
   background: var(--color-warning-bg);
-  color: #92400e;
+  color: var(--color-warning-dark);
   font-size: .84rem;
 }
 .logout-button,
 .search-card .secondary-button {
   min-height: 42px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background: #fff;
   color: var(--navy);
@@ -448,14 +536,14 @@ app-donation-trace-page {
 .logout-button { margin-top: .8rem; padding: .6rem .85rem; }
 .logout-button:hover:not(:disabled),
 .search-card .secondary-button:hover:not(:disabled) {
-  border-color: #94a3b8;
-  background: #f8fafc;
-  color: #061f4b;
+  border-color: var(--color-border-hover);
+  background: var(--color-neutral-bg);
+  color: var(--color-navy);
 }
 .logout-button:active:not(:disabled),
-.search-card .secondary-button:active:not(:disabled) { background: #f1f5f9; }
+.search-card .secondary-button:active:not(:disabled) { background: var(--color-disabled-bg); }
 .logout-button:focus-visible,
-.search-card .secondary-button:focus-visible { outline-color: rgb(9 45 105 / 28%); }
+.search-card .secondary-button:focus-visible { outline-color: rgb(23 59 104 / 30%); }
 .login-explanation {
   max-width: 700px;
   margin-bottom: 1.1rem;
@@ -466,6 +554,7 @@ app-donation-trace-page {
 .login-panel { max-width: 720px; }
 
 @media (max-width: 480px) {
+  .panel-description { margin-bottom: var(--space-3); font-size: .86rem; line-height: 1.6; }
   .org-login-link { padding-inline: .55rem; font-size: .7rem; }
   .header-label { display: none; }
   .section-heading { align-items: flex-start; }

@@ -52,6 +52,7 @@ class DeliveryManagementServiceTest {
         when(donation.getId()).thenReturn(2L);
         when(donations.findByIdForUpdate(2L)).thenReturn(Optional.of(donation));
         when(needs.findByIdForUpdate(1L)).thenReturn(Optional.of(need));
+        when(need.getId()).thenReturn(1L);
         when(source.getRecurso()).thenReturn(resource);
         when(need.getRecurso()).thenReturn(resource);
         when(resource.getId()).thenReturn(3L);
@@ -71,12 +72,15 @@ class DeliveryManagementServiceTest {
         when(lines.deliveredToPair(1L, 10L)).thenReturn(q("0"));
         when(lines.assignedToDonation(10L)).thenReturn(q("0"));
         when(lines.assignedToNeed(1L)).thenReturn(q("0"));
+        when(lines.deliveredToNeed(1L)).thenReturn(q("0"));
+        when(lines.sourcesWithPendingReservations(1L)).thenReturn(java.util.List.of());
         when(lines.distributionAssignedToPair(1L, 10L)).thenReturn(q("0"));
         when(lines.distributionDeliveredToPair(1L, 10L)).thenReturn(q("0"));
         when(lines.distributionDelivered(10L)).thenReturn(q("0"));
         var delivery = mock(Delivery.class);
         when(delivery.getId()).thenReturn(20L);
         when(deliveries.saveAndFlush(any())).thenReturn(delivery);
+        when(needs.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
     }
 
     @Test void repeatedTotalsDoNotWriteTwiceAndAuditContainsDeltas() {
@@ -193,5 +197,57 @@ class DeliveryManagementServiceTest {
         assertThrows(ResponseStatusException.class, () -> service.save(1, 10, "admin@example.test", request("1", "2")));
         assertThrows(ResponseStatusException.class, () -> service.save(1, 10, "admin@example.test", request("0.0001", "0")));
         verifyNoInteractions(sources, deliveries, audit);
+    }
+
+    @Test void finalDeliveryClosesNeedAndAuditsAutomaticTransitionInSameServiceTransaction() {
+        when(lines.assignedToNeed(1L)).thenReturn(q("0"), q("5"));
+        when(lines.deliveredToNeed(1L)).thenReturn(q("5"));
+        when(need.getEstado()).thenReturn("PENDIENTE");
+
+        var result = service.save(1, 10, "admin@example.test", request("5", "5"));
+
+        assertEquals("CERRADA", result.estadoNecesidad());
+        verify(need).cambiarEstado("CERRADA");
+        verify(needs).saveAndFlush(need);
+        var records = org.mockito.ArgumentCaptor.forClass(AuditRecord.class);
+        verify(audit, times(2)).saveAndFlush(records.capture());
+        assertEquals("ASIGNACION_ENTREGA", records.getAllValues().get(0).getAccion());
+        assertEquals("CIERRE_AUTOMATICO_NECESIDAD", records.getAllValues().get(1).getAccion());
+        assertTrue(records.getAllValues().get(1).getDatosNuevos().contains("ENTREGA_FINAL_CONFIRMADA"));
+    }
+
+    @Test void pendingReservationPreventsAutomaticCompletion() {
+        when(lines.assignedToNeed(1L)).thenReturn(q("0"), q("5"));
+        when(lines.deliveredToNeed(1L)).thenReturn(q("5"));
+        when(lines.sourcesWithPendingReservations(1L)).thenReturn(java.util.List.of(10L));
+
+        var result = service.save(1, 10, "admin@example.test", request("5", "5"));
+
+        assertEquals("PENDIENTE", result.estadoNecesidad());
+        verify(need, never()).cambiarEstado(anyString());
+        verify(needs, never()).saveAndFlush(any());
+        verify(audit, times(1)).saveAndFlush(any());
+    }
+
+    @Test void partialDeliveryLeavesNeedPending() {
+        when(lines.assignedToNeed(1L)).thenReturn(q("0"), q("5"));
+        when(lines.deliveredToNeed(1L)).thenReturn(q("4"));
+        when(lines.sourcesWithPendingReservations(1L)).thenReturn(java.util.List.of(10L));
+
+        var result = service.save(1, 10, "admin@example.test", request("5", "4"));
+
+        assertEquals("PENDIENTE", result.estadoNecesidad());
+        verify(need, never()).cambiarEstado(anyString());
+        verify(needs, never()).saveAndFlush(any());
+    }
+
+    @Test void rejectsDeliveryOnTerminalNeedsEvenWhenTotalsRepeat() {
+        when(need.getEstado()).thenReturn("CERRADA");
+        assertEquals(409, assertThrows(ResponseStatusException.class,
+                () -> service.save(1, 10, "admin@example.test", request("0", "0"))).getStatusCode().value());
+        when(need.getEstado()).thenReturn("CANCELADA");
+        assertEquals(409, assertThrows(ResponseStatusException.class,
+                () -> service.save(1, 10, "admin@example.test", request("0", "0"))).getStatusCode().value());
+        verifyNoInteractions(deliveries, audit);
     }
 }

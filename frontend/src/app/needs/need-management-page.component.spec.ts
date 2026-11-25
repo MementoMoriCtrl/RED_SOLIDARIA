@@ -54,6 +54,16 @@ describe('NeedManagementPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Todavía no hay necesidades registradas');
   });
 
+  it('displays persisted CERRADA as COMPLETADA with the green semantic badge', async () => {
+    http.expectOne('/api/recursos').flush([{ id: 3, nombre: 'Arroz', estado: 'ACTIVO', unidadMedida: { codigo: 'KG' } }]);
+    http.expectOne('/api/admin/emergencias/1').flush({ nombre: 'Emergencia de prueba', zonas: [{ id: 2, nombre: 'Zona de prueba' }] });
+    http.expectOne(`${endpoint}?page=0`).flush({ ...page, content: [{ ...need, estado: 'CERRADA' }] });
+    await fixture.whenStable();
+    const badge = fixture.nativeElement.querySelector('.status-chip') as HTMLElement;
+    expect(badge.textContent).toContain('COMPLETADA');
+    expect(badge.classList.contains('status--green')).toBe(true);
+  });
+
   it('requires a reason and submits the chosen transition', async () => {
     flushInitial();
     const component = fixture.componentInstance;
@@ -98,11 +108,33 @@ describe('NeedManagementPageComponent', () => {
     const request = http.expectOne('/api/admin/necesidades/4/donaciones/5/entrega');
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual({ totalAsignado: 4, totalEntregado: 3 });
-    request.flush({ entregaId: 9, totalAsignado: 4, totalEntregado: 3, repetida: false });
+    request.flush({ entregaId: 9, totalAsignado: 4, totalEntregado: 3, repetida: false, estadoNecesidad: 'PENDIENTE' });
     http.expectOne(`${endpoint}?page=0`).flush({ ...page, content: [{ ...need, entregada: 3, pendienteEntregar: 7 }] });
     await fixture.whenStable();
     expect(component.needs.content[0].pendienteEntregar).toBe(7);
     expect(component.source).toBeNull();
+  });
+
+  it('shows automatic completion after the final delivery and refreshes the balance', async () => {
+    flushInitial();
+    const component = fixture.componentInstance;
+    const nearlyComplete = { ...need, requerida: 4, asignada: 4, entregada: 1, pendienteAsignar: 0, pendienteEntregar: 3 };
+    component.select(nearlyComplete);
+    http.expectOne('/api/admin/necesidades/4/donaciones?page=0').flush({ content: [source], totalElements: 1, totalPages: 1, page: 0 });
+    component.selectSource(source);
+    component.delivered = 4;
+    component.saveDelivery();
+    http.expectOne('/api/admin/necesidades/4/donaciones/5/entrega').flush({
+      entregaId: 10, totalAsignado: 4, totalEntregado: 4, repetida: false, estadoNecesidad: 'CERRADA',
+    });
+    http.expectOne(`${endpoint}?page=0`).flush({ ...page, content: [{
+      ...nearlyComplete, estado: 'CERRADA', entregada: 4, pendienteEntregar: 0,
+    }] });
+    await fixture.whenStable();
+    expect(component.needs.content[0].estado).toBe('CERRADA');
+    expect(component.needs.content[0].pendienteEntregar).toBe(0);
+    expect(fixture.nativeElement.querySelector('.status-chip').textContent).toContain('COMPLETADA');
+    expect(component.success).toContain('La necesidad se completó');
   });
 
   it('edits only allowed fields and rejects quantities below assigned', async () => {
@@ -145,7 +177,7 @@ describe('NeedManagementPageComponent', () => {
     component.saveDelivery();
     const retry = http.expectOne('/api/admin/necesidades/4/donaciones/5/entrega');
     expect(retry.request.body).toEqual(payload);
-    retry.flush({ entregaId: null, totalAsignado: 4, totalEntregado: 2, repetida: true });
+    retry.flush({ entregaId: null, totalAsignado: 4, totalEntregado: 2, repetida: true, estadoNecesidad: 'PENDIENTE' });
     http.expectOne(`${endpoint}?page=0`).flush(page);
     await fixture.whenStable();
     expect(component.success).toContain('no se duplicó');

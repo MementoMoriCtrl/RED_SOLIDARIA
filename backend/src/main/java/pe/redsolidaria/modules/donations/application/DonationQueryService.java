@@ -102,29 +102,61 @@ public class DonationQueryService {
     }
 
     @Transactional(readOnly = true)
-    public PublicDonationTraceResponse findPublicByTrackingCode(String trackingCode) {
+    public PublicDonationSummary findPublicByTrackingCode(String trackingCode) {
         String normalizedCode = trackingCode == null ? "" : trackingCode.trim();
         Donation donation = donations.findByCodigoTrazabilidad(normalizedCode)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Donación no encontrada"));
 
-        PublicCollectionCenterSummary center = donation.getCentroAcopio() == null ? null
-                : new PublicCollectionCenterSummary(donation.getCentroAcopio().getNombre(),
-                        donation.getCentroAcopio().getUbicacion());
-        List<PublicDonationDetailSummary> details = donation.getDetalles().stream()
-                .map(line -> {
-                    var resource = line.getRecurso();
-                    var unit = resource.getUnidadMedida();
-                    return new PublicDonationDetailSummary(resource.getNombre(), line.getCantidadDonada(),
-                            line.getCantidadRecibidaAcopio(), unit.getCodigo(), unit.getNombre(), unit.getSimbolo());
-                })
-                .toList();
+        List<String> resources = donation.getDetalles().stream().map(line -> line.getRecurso().getNombre()).distinct().toList();
         var recordedHistory = movements.findAllByDonacion_IdOrderByFechaHoraAscIdAsc(donation.getId());
-        var publicCustody=custody.read(donation,recordedHistory).situacion();
-        var history=publicHistory(recordedHistory,publicCustody);
+        var milestones = publicMilestones(donation, recordedHistory);
+        String state = publicState(donation.getEstado(), recordedHistory);
+        String emergency = donation.getEmergencia() == null ? null : donation.getEmergencia().getNombre();
+        return new PublicDonationSummary(donation.getCodigoTrazabilidad(), donation.getFechaRegistro(), emergency,
+                resources, state, publicStateExplanation(state), milestones);
+    }
 
-        return new PublicDonationTraceResponse(donation.getCodigoTrazabilidad(), donation.getFechaRegistro(),
-                donation.getFechaIngreso(), donation.getEstado(), center, details, history,
-                publicCustody);
+    private static List<PublicTraceMilestone> publicMilestones(Donation donation, List<DonationMovement> movements) {
+        var hits = new java.util.ArrayList<PublicTraceMilestone>();
+        hits.add(new PublicTraceMilestone("REGISTRADA", "Donación registrada", donation.getFechaRegistro()));
+        for (var movement : movements) {
+            String type = movement.getTipoEvento();
+            if ("RECEPCION_DONACION".equals(type) || "RECEPCION_ACOPIO".equals(type) || "AUTORIZACION_EXCEDENTE".equals(type))
+                hits.add(new PublicTraceMilestone("RECIBIDA", "Recepción confirmada", movement.getFechaHora()));
+            else if ("SALIDA_TRASLADO".equals(type)) hits.add(new PublicTraceMilestone("EN_TRANSITO", "Traslado en tránsito", movement.getFechaHora()));
+            else if ("RECEPCION_DISTRIBUCION".equals(type)) hits.add(new PublicTraceMilestone("RECIBIDA_EN_DESTINO", "Recibida en destino", movement.getFechaHora()));
+            else if ("ENTREGA_POBLACION".equals(type)) hits.add(new PublicTraceMilestone("ENTREGADA", "Entrega a la población confirmada", movement.getFechaHora()));
+        }
+        if ("INCIDENCIA".equals(donation.getEstado()) || movements.stream().anyMatch(m -> "INCIDENCIA".equals(m.getEstadoNuevo())))
+            hits.add(new PublicTraceMilestone("EN_VERIFICACION", "La donación está en verificación", null));
+        if ("DEVUELTA".equals(donation.getEstado())) hits.add(new PublicTraceMilestone("DEVUELTA", "Donación devuelta", null));
+        return hits.stream().collect(Collectors.toMap(h -> h.estado()+"|"+h.fechaHora(), h -> h, (a,b)->a, java.util.LinkedHashMap::new)).values().stream().toList();
+    }
+    private static String publicState(String state, List<DonationMovement> history) {
+        if (history.stream().anyMatch(m -> "ENTREGA_POBLACION".equals(m.getTipoEvento()))) return "ENTREGADA";
+        if (history.stream().anyMatch(m -> "RECEPCION_DISTRIBUCION".equals(m.getTipoEvento()))) return "RECIBIDA_EN_DESTINO";
+        if (history.stream().anyMatch(m -> "SALIDA_TRASLADO".equals(m.getTipoEvento()))) return "EN_TRANSITO";
+        if (history.stream().anyMatch(m -> Set.of("RECEPCION_DONACION", "RECEPCION_ACOPIO", "AUTORIZACION_EXCEDENTE").contains(m.getTipoEvento()))) return "RECIBIDA";
+        if ("INCIDENCIA".equals(state)) return "EN_VERIFICACION";
+        return switch (state) {
+            case "REGISTRADA" -> "REGISTRADA";
+            case "EN_TRANSITO" -> "EN_TRANSITO";
+            case "ENTREGADA" -> history.stream().anyMatch(m -> "ENTREGA_POBLACION".equals(m.getTipoEvento())) ? "ENTREGADA" : "RECIBIDA_EN_DESTINO";
+            case "DEVUELTA" -> "DEVUELTA";
+            case "RECIBIDA", "ALMACENADA", "CLASIFICADA" -> "RECIBIDA";
+            default -> "EN_VERIFICACION";
+        };
+    }
+    private static String publicStateExplanation(String state) {
+        return switch (state) {
+            case "REGISTRADA" -> "La donación fue registrada y está pendiente de recepción confirmada.";
+            case "RECIBIDA" -> "La recepción de la donación fue confirmada.";
+            case "EN_TRANSITO" -> "La donación está en traslado hacia su destino.";
+            case "RECIBIDA_EN_DESTINO" -> "La recepción en destino fue confirmada. Esto no significa que ya se entregó a la población.";
+            case "ENTREGADA" -> "La entrega a la población fue confirmada.";
+            case "DEVUELTA" -> "La donación fue devuelta.";
+            default -> "La donación está en verificación.";
+        };
     }
 
     private static List<PublicDonationMovementSummary> publicHistory(List<DonationMovement> recorded,

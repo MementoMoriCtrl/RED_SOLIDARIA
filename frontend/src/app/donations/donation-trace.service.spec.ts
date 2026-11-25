@@ -23,11 +23,7 @@ describe('DonationTraceService', () => {
     const response: DonationTrace = {
       codigoTrazabilidad: 'RS-TRACE-2',
       fechaRegistro: '2026-04-02T10:00:00',
-      fechaIngreso: null,
-      estado: 'REGISTRADA',
-      centroAcopio: null,
-      detalles: [],
-      movimientos: [],
+      emergencia: null, recursos: [], estadoActual: 'REGISTRADA', explicacionEstado: 'Registrada', hitos: [],
     };
     let result: DonationTrace | undefined;
 

@@ -2,43 +2,53 @@
   @if (logoutError) { <div role="alert">{{ logoutError }}</div> }
   <aside class="sidebar" aria-label="Navegación principal">
     <a class="brand" routerLink="/" aria-label="Red Solidaria, inicio">
-      <span class="brand-mark" aria-hidden="true">RS</span>
+      <span class="brand-mark" aria-hidden="true"><img src="/assets/Red_Solidaria.png" alt="" /></span>
       <span class="brand-copy"><strong>Red Solidaria</strong><small>Gestión y trazabilidad</small></span>
     </a>
     <p class="sidebar-label">MÓDULOS</p>
     <nav class="side-nav" aria-label="Módulos disponibles">
+      <section class="nav-group" aria-labelledby="operation-nav-title">
+        <h2 id="operation-nav-title" class="nav-group-title">OPERACIÓN DEL SISTEMA</h2>
+        @if (showAdminLink) {
+          <a class="nav-item" routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
+            <span class="nav-icon" aria-hidden="true">A</span><span>Panel administrativo</span>
+          </a>
+          <a class="nav-item" routerLink="/admin/emergencias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
+            <span class="nav-icon" aria-hidden="true">E</span><span>Gestión de emergencias</span>
+          </a>
+        }
+        @if (showResourceLink) {
+          <a class="nav-item" routerLink="/recursos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
+            <span class="nav-icon" aria-hidden="true">R</span><span>Gestión de recursos</span>
+          </a>
+        }
+        @if (showAdminLink) {
+          <a class="nav-item" routerLink="/admin/catalogos-donaciones" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">C</span><span>Catálogos de donaciones</span></a>
+        }
+        @if (showDonationRegistrationLink) { <a class="nav-item" routerLink="/donaciones/registro" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">D</span><span>Registrar donación</span></a> }
+        @if (showAdminLink) {
+          <a class="nav-item" routerLink="/admin/donaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page">
+            <span class="nav-icon" aria-hidden="true">D</span><span>Gestión de donaciones</span>
+          </a>
+          <a class="nav-item" routerLink="/admin/logistica" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">L</span><span>Traslados y distribución</span></a>
+        }
+        <a class="nav-item" routerLink="/trazabilidad" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
+          <span class="nav-icon" aria-hidden="true">T</span><span>Trazabilidad pública</span>
+        </a>
+        @if (showAdminLink) {
+          <a class="nav-item" routerLink="/admin/reportes" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">R</span><span>Reportes</span></a>
+        }
+      </section>
       @if (showAdminLink) {
-        <a class="nav-item" routerLink="/admin/reportes" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">R</span><span>Reportes</span></a>
-        <a class="nav-item" routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
-          <span class="nav-icon" aria-hidden="true">A</span><span>Panel administrativo</span>
-        </a>
+        <section class="nav-group nav-group-secondary" aria-labelledby="control-nav-title">
+          <h2 id="control-nav-title" class="nav-group-title">ADMINISTRACIÓN Y CONTROL</h2>
+          <a class="nav-item" routerLink="/admin/usuarios" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">U</span><span>Gestión de usuarios</span></a>
+          <a class="nav-item" routerLink="/admin/roles" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">R</span><span>Roles y permisos</span></a>
+          <a class="nav-item" routerLink="/admin/auditoria" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
+            <span class="nav-icon" aria-hidden="true">A</span><span>Registro de auditoría</span>
+          </a>
+        </section>
       }
-      @if (showDonationRegistrationLink) { <a class="nav-item" routerLink="/donaciones/registro" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">D</span><span>Registrar donación</span></a> }
-      @if (showAdminLink) {
-        <a class="nav-item" routerLink="/admin/usuarios" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">U</span><span>Gestión de usuarios</span></a>
-        <a class="nav-item" routerLink="/admin/roles" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">R</span><span>Roles y permisos</span></a>
-        <a class="nav-item" routerLink="/admin/catalogos-donaciones" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">C</span><span>Catálogos de donaciones</span></a>
-        <a class="nav-item" routerLink="/admin/donaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page">
-          <span class="nav-icon" aria-hidden="true">D</span><span>Gestión de donaciones</span>
-        </a>
-        <a class="nav-item" routerLink="/admin/logistica" routerLinkActive="active" ariaCurrentWhenActive="page"><span class="nav-icon" aria-hidden="true">L</span><span>Traslados y distribución</span></a>
-        <a class="nav-item" routerLink="/admin/emergencias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
-          <span class="nav-icon" aria-hidden="true">E</span><span>Gestión de emergencias</span>
-        </a>
-      }
-      @if (showResourceLink) {
-        <a class="nav-item" routerLink="/recursos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
-          <span class="nav-icon" aria-hidden="true">R</span><span>Gestión de recursos</span>
-        </a>
-      }
-      @if (showAdminLink) {
-        <a class="nav-item" routerLink="/admin/auditoria" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
-          <span class="nav-icon" aria-hidden="true">A</span><span>Registro de auditoría</span>
-        </a>
-      }
-      <a class="nav-item" routerLink="/trazabilidad" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
-        <span class="nav-icon" aria-hidden="true">T</span><span>Trazabilidad pública</span>
-      </a>
     </nav>
     <div class="sidebar-footer">
       @if (isAuthenticated) {

@@ -121,15 +121,13 @@ class DonationQueryServiceTest {
 
         when(movement.getTipoEvento()).thenReturn("RECEPCION_DONACION");
         var publicResponse = service.findPublicByTrackingCode("RS-TRACE-1");
-        assertEquals("Verificación física confirmada",publicResponse.movimientos().getFirst().descripcion());
-        assertNull(publicResponse.movimientos().getFirst().ubicacion());
+        assertEquals("RECIBIDA",publicResponse.estadoActual());
+        assertTrue(publicResponse.hitos().stream().anyMatch(h -> "Recepción confirmada".equals(h.explicacion())));
         assertEquals("RS-TRACE-1", publicResponse.codigoTrazabilidad());
-        assertEquals("Centro principal", publicResponse.centroAcopio().nombre());
-        assertEquals("Agua", publicResponse.detalles().getFirst().recursoNombre());
-        assertEquals("REGISTRADA", publicResponse.movimientos().getFirst().estadoNuevo());
+        assertEquals(List.of("Agua"), publicResponse.recursos());
         assertFalse(publicResponse.toString().contains("Donante de prueba"));
         assertFalse(publicResponse.toString().contains("Ana"));
-        assertFalse(publicResponse.toString().contains("Recepci"));
+        assertFalse(publicResponse.toString().contains("cantidad"));
 
         var adminResponse = service.findAdministrativeById(31L);
         assertEquals(31L, adminResponse.id());

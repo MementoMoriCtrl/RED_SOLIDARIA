@@ -72,7 +72,7 @@
           <article class="panel resource-card">
             <div class="resource-card-top">
               <span class="resource-category">{{ resource.categoria }}</span>
-              <span class="resource-status" [class.is-inactive]="resource.estado !== 'ACTIVO'">{{ resource.estado }}</span>
+              <span class="resource-status" [class.is-inactive]="resource.estado !== 'ACTIVO'" [class.status--blue]="resource.estado === 'ACTIVO'">{{ resource.estado }}</span>
             </div>
             <h2>{{ resource.nombre }}</h2>
             <p class="resource-unit">{{ resource.unidadMedida.nombre }}{{ resource.unidadMedida.simbolo ? ' · ' + resource.unidadMedida.simbolo : '' }}</p>

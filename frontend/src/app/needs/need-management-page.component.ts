@@ -146,7 +146,9 @@ export class NeedManagementPageComponent implements OnInit {
       { totalAsignado: this.assigned!, totalEntregado: this.delivered! })
       .pipe(finalize(() => { this.saving = false; this.changeDetector.markForCheck(); }))
       .subscribe({ next: result => {
-        this.success = result.repetida ? 'Estos totales ya estaban registrados; no se duplicó la operación.' : 'Asignación y entrega registradas.';
+        this.success = result.estadoNecesidad === 'CERRADA'
+          ? result.repetida ? 'Estos totales ya estaban registrados; la necesidad figura completada.' : 'Entrega confirmada. La necesidad se completó.'
+          : result.repetida ? 'Estos totales ya estaban registrados; no se duplicó la operación.' : 'Asignación y entrega registradas.';
         this.saving = false; this.load(this.needs.page);
       }, error: (response: HttpErrorResponse) => { this.error = this.message(response); } });
   }

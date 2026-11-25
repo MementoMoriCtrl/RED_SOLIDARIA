@@ -20,14 +20,14 @@
         @if (editing) { <button type="button" [disabled]="saving" (click)="cancelEdit()">Cancelar edición</button> }
       </form>
     </section>
-    <section class="panel"><h2>Balance de necesidades</h2>
-      <p>Pendiente de entregar = requerida − entregada a la población. Una recepción en acopio no es una entrega.</p>
+    <section class="panel"><h2 class="panel-title">Balance de necesidades</h2>
+      <p class="panel-description">Pendiente de entregar = requerida − entregada a la población. Una recepción en acopio no es una entrega.</p>
       <button type="button" [disabled]="saving || loadingSources" (click)="load(needs.page)">Recargar saldos</button>
       @if (needs.content.length === 0 && !error) { <p role="status">Todavía no hay necesidades registradas en esta zona.</p> }
       @if (needs.content.length > 0) {
         <div class="table-wrap"><table><thead><tr><th>Recurso / unidad</th><th>Prioridad</th><th>Estado</th><th>Requerida</th><th>Asignada</th><th>Entregada</th><th>Sin asignar</th><th>Pendiente de entregar</th><th></th></tr></thead>
           <tbody>@for (need of needs.content; track need.id) {
-            <tr><td>{{ need.recursoNombre }} / {{ need.unidad }}</td><td>{{ need.prioridad }}</td><td>{{ need.estado }}</td>
+            <tr><td>{{ need.recursoNombre }} / {{ need.unidad }}</td><td>{{ need.prioridad }}</td><td><span class="status-chip" [class.status--amber]="need.estado === 'PENDIENTE'" [class.status--green]="need.estado === 'CERRADA'" [class.status--red]="need.estado === 'CANCELADA'">{{ need.estado === 'CERRADA' ? 'COMPLETADA' : need.estado }}</span></td>
               <td>{{ need.requerida | number:'1.0-3' }}</td><td>{{ need.asignada | number:'1.0-3' }}</td><td>{{ need.entregada | number:'1.0-3' }}</td>
               <td>{{ need.pendienteAsignar | number:'1.0-3' }}</td><td>{{ need.pendienteEntregar | number:'1.0-3' }}</td>
               <td><button type="button" [disabled]="saving || loadingSources || need.estado !== 'PENDIENTE'" (click)="edit(need)">Editar</button> <button type="button" [disabled]="saving || loadingSources || need.estado !== 'PENDIENTE'" (click)="select(need)">Asignar / entregar</button>
@@ -52,13 +52,13 @@
   }
   @if (loadingSources) { <p role="status">Cargando donaciones compatibles…</p> }
   @if (selected && !loading && !loadingSources) {
-    <section class="panel"><h2>Donaciones para {{ selected.recursoNombre }} ({{ selected.unidad }})</h2>
-      <p>Solo donaciones de la misma emergencia y recurso. Disponible = recepción confirmada en distribución − reservas nuevas. Las reservas históricas permanecen separadas.
+    <section class="panel"><h2 class="panel-title">Donaciones para {{ selected.recursoNombre }} ({{ selected.unidad }})</h2>
+      <p class="panel-description">Solo donaciones de la misma emergencia y recurso. Disponible = recepción confirmada en distribución − reservas nuevas. Las reservas históricas permanecen separadas.
         Este saldo es compartido; no se suma otra vez por cada necesidad. Estados en tránsito, devuelta, incidencia o entregada no admiten nuevas operaciones.</p>
       @if (sources.content.length === 0 && !error) { <p role="status">No hay donaciones con recepción o asignación registrada para este recurso y emergencia.</p> }
       <div class="table-wrap"><table><thead><tr><th>Donación / estado</th><th>Recibido en acopio</th><th>Asignado total de donación</th><th>Disponible en distribución</th><th>Asignado a esta necesidad</th><th>Entregado a esta necesidad</th><th></th></tr></thead>
         <tbody>@for (item of sources.content; track item.detalleDonacionId) {
-          <tr><td>{{ item.codigoTrazabilidad }} / {{ item.estado }}</td><td>{{ item.recibidaAcopio | number:'1.0-3' }}</td>
+          <tr><td>{{ item.codigoTrazabilidad }} / <span class="status-chip" [class.status--blue]="['REGISTRADA', 'RECIBIDA', 'ALMACENADA', 'CLASIFICADA'].includes(item.estado)" [class.status--purple]="item.estado === 'EN_TRANSITO'" [class.status--green]="item.estado === 'ENTREGADA'" [class.status--amber]="item.estado === 'DEVUELTA'" [class.status--red]="item.estado === 'INCIDENCIA'">{{ item.estado }}</span></td><td>{{ item.recibidaAcopio | number:'1.0-3' }}</td>
             <td>{{ item.asignadaDonacion | number:'1.0-3' }}</td><td>{{ item.disponible | number:'1.0-3' }}</td>
             <td>{{ item.asignadaNecesidad | number:'1.0-3' }}</td><td>{{ item.entregadaNecesidad | number:'1.0-3' }}</td>
             <td><button type="button" [disabled]="saving || !item.habilitada" (click)="selectSource(item)">Seleccionar</button></td></tr>
@@ -67,7 +67,7 @@
         <span>Página {{ sources.page + 1 }} de {{ sources.totalPages || 1 }}</span>
         <button type="button" [disabled]="sources.page + 1 >= sources.totalPages || saving" (click)="select(selected, sources.page + 1)">Siguiente</button></nav>
       @if (source) {
-        <h3>{{ source.codigoTrazabilidad }}</h3><p>Ingresa los totales acumulados de esta donación para esta necesidad. Para confirmar una entrega posterior, conserva el total asignado y aumenta únicamente el entregado. Reenviar los mismos totales no duplica la operación.</p>
+        <h3 class="panel-subtitle">{{ source.codigoTrazabilidad }}</h3><p class="panel-description">Ingresa los totales acumulados de esta donación para esta necesidad. Para confirmar una entrega posterior, conserva el total asignado y aumenta únicamente el entregado. Reenviar los mismos totales no duplica la operación.</p>
         <form #deliveryForm="ngForm" (ngSubmit)="saveDelivery()">
           <label>Total asignado<input name="assigned" type="number" [(ngModel)]="assigned" [min]="source.asignadaNecesidad" max="99999999999.999" step="0.001" required /></label>
           <label>Total entregado a población<input name="delivered" type="number" [(ngModel)]="delivered" [min]="source.entregadaNecesidad" [max]="assigned ?? 0" step="0.001" required /></label>

@@ -4,6 +4,7 @@ import static pe.redsolidaria.modules.deliveries.api.dto.DeliveryDtos.*;
 
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -64,13 +65,15 @@ public class DeliveryManagementService {
         var delivered = lines.deliveredToPair(needId, sourceId);
         var assignDelta = request.totalAsignado().subtract(assigned);
         var deliverDelta = request.totalEntregado().subtract(delivered);
-        if (assignDelta.signum() == 0 && deliverDelta.signum() == 0)
-            return new DeliveryResponse(null, assigned, delivered, true);
-        if (assignDelta.signum() < 0 || deliverDelta.signum() < 0)
-            throw conflict("Los totales ya avanzaron; recarga los datos. No se permiten disminuciones");
         if (!NeedManagementService.USABLE_STATES.contains(donation.getEstado())
                 || !"ACTIVO".equals(need.getRecurso().getEstado()) || !"PENDIENTE".equals(need.getEstado()))
             throw conflict("El estado actual de la donación, recurso o necesidad no admite esta operación");
+        if (assignDelta.signum() == 0 && deliverDelta.signum() == 0) {
+            String state = closeAutomaticallyIfComplete(need, actor, null);
+            return new DeliveryResponse(null, assigned, delivered, true, state);
+        }
+        if (assignDelta.signum() < 0 || deliverDelta.signum() < 0)
+            throw conflict("Los totales ya avanzaron; recarga los datos. No se permiten disminuciones");
         if (assignDelta.signum() > 0 && lines.distributionAssigned(sourceId).add(assignDelta).compareTo(logistics.received(sourceId)) > 0)
             throw conflict("La asignación supera lo confirmado y disponible en distribución");
         if (deliverDelta.signum() > 0) {
@@ -98,7 +101,32 @@ public class DeliveryManagementService {
         if (deliverDelta.signum()>0) entityManager.persist(new pe.redsolidaria.modules.donations.domain.DonationMovement(donation,actor,
                 donation.getEstado(),donation.getEstado(),need.getZona().getNombre(),
                 "Necesidad " + needId + ": entrega final +" + deliverDelta.toPlainString()).conTipo("ENTREGA_POBLACION"));
-        return new DeliveryResponse(delivery.getId(), request.totalAsignado(), request.totalEntregado(), false);
+        String needState = closeAutomaticallyIfComplete(need, actor, delivery.getId());
+        return new DeliveryResponse(delivery.getId(), request.totalAsignado(), request.totalEntregado(), false, needState);
+    }
+
+    private String closeAutomaticallyIfComplete(pe.redsolidaria.modules.needs.domain.Need need,
+            pe.redsolidaria.modules.access.domain.UserAccount actor, Long deliveryId) {
+        if (!"PENDIENTE".equals(need.getEstado())) return need.getEstado();
+        BigDecimal assigned = lines.assignedToNeed(need.getId());
+        BigDecimal delivered = lines.deliveredToNeed(need.getId());
+        BigDecimal required = need.getCantidadRequerida();
+        if (assigned.compareTo(required) < 0 || delivered.compareTo(required) < 0
+                || assigned.compareTo(delivered) < 0
+                || !lines.sourcesWithPendingReservations(need.getId()).isEmpty()) return need.getEstado();
+
+        need.cambiarEstado("CERRADA");
+        needs.saveAndFlush(need);
+        var newData = new LinkedHashMap<String, Object>();
+        newData.put("estado", "CERRADA");
+        newData.put("motivo", "ENTREGA_FINAL_CONFIRMADA");
+        newData.put("cantidadRequerida", required);
+        newData.put("cantidadAsignada", assigned);
+        newData.put("cantidadEntregada", delivered);
+        if (deliveryId != null) newData.put("entregaId", deliveryId);
+        audit.saveAndFlush(new AuditRecord(actor, "NECESIDAD", need.getId().toString(),
+                "CIERRE_AUTOMATICO_NECESIDAD", "{\"estado\":\"PENDIENTE\"}", json.writeValueAsString(newData)));
+        return "CERRADA";
     }
 
     private static boolean invalid(BigDecimal quantity) {

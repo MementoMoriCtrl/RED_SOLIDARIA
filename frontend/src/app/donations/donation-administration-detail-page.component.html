@@ -8,7 +8,7 @@
     <section class="intro" aria-labelledby="page-title">
       <p class="eyebrow">DETALLE ADMINISTRATIVO</p>
       <h1 id="page-title">Donación {{ item.codigoTrazabilidad }}</h1>
-      <p class="intro-copy">Registrada el {{ item.fechaRegistro | date:'dd/MM/yyyy HH:mm' }} · Estado: <strong>{{ item.estado }}</strong></p>
+      <p class="intro-copy">Registrada el {{ item.fechaRegistro | date:'dd/MM/yyyy HH:mm' }} · Estado: <strong class="status-chip" [class.status--blue]="['REGISTRADA', 'RECIBIDA', 'ALMACENADA', 'CLASIFICADA'].includes(item.estado)" [class.status--purple]="item.estado === 'EN_TRANSITO'" [class.status--green]="item.estado === 'ENTREGADA'" [class.status--amber]="item.estado === 'DEVUELTA' || item.estado === 'PENDIENTE'" [class.status--red]="item.estado === 'INCIDENCIA'">{{ item.estado }}</strong></p>
         <p>RECIBIDA indica que terminó la verificación, incluso si hay diferencias respecto de lo declarado.</p>
     </section>
 
@@ -30,7 +30,7 @@
       <section class="panel admin-detail-section"><h2>Historial operativo por recurso y destino de distribución</h2>
         @for (operation of trace.operaciones; track $index) {
           <article class="detail-line"><div><h3>{{ operation.recurso }} / {{ operation.unidad }} · {{ operation.movimiento.evento }}</h3>
-            <p>{{ operation.movimiento.fechaHora | date:'dd/MM/yyyy HH:mm' }} · {{ operation.movimiento.estado }}</p>
+            <p>{{ operation.movimiento.fechaHora | date:'dd/MM/yyyy HH:mm' }} · <span class="status-chip" [class.status--blue]="['REGISTRADA', 'RECIBIDA', 'ALMACENADA', 'CLASIFICADA'].includes(operation.movimiento.estado)" [class.status--purple]="operation.movimiento.estado === 'EN_TRANSITO'" [class.status--green]="operation.movimiento.estado === 'ENTREGADA'" [class.status--amber]="operation.movimiento.estado === 'DEVUELTA' || operation.movimiento.estado === 'PENDIENTE'" [class.status--red]="operation.movimiento.estado === 'INCIDENCIA'">{{ operation.movimiento.estado }}</span></p>
             <p>Origen: {{ operation.movimiento.origen?.nombre || 'No documentado' }} · {{ operation.movimiento.origen?.direccionInstitucional }}</p>
             <p>Destino: {{ operation.movimiento.destino?.nombre || operation.movimiento.zona || 'No documentado' }} · {{ operation.movimiento.destino?.direccionInstitucional }}</p>
             <p>Enviada: {{ operation.movimiento.cantidadEnviada === null ? 'No aplica' : (operation.movimiento.cantidadEnviada | number:'1.0-3') }} · Recibida / asignada / entregada: {{ operation.movimiento.cantidadRecibida === null ? 'No aplica' : (operation.movimiento.cantidadRecibida | number:'1.0-3') }}</p>
@@ -145,7 +145,7 @@
       @else {
         <ol class="movement-list">
           @for (movement of item.movimientos; track movement.fechaHora + movement.estadoNuevo) {
-            <li><div><strong>{{ movement.estadoAnterior || 'Inicio' }} → {{ movement.estadoNuevo }}</strong><p>{{ movement.fechaHora | date:'dd/MM/yyyy HH:mm' }}{{ movement.ubicacion ? ' · ' + movement.ubicacion : '' }}</p>
+            <li><div><strong><span class="status-chip" [class.status--blue]="['REGISTRADA', 'RECIBIDA', 'ALMACENADA', 'CLASIFICADA'].includes(movement.estadoNuevo)" [class.status--purple]="movement.estadoNuevo === 'EN_TRANSITO'" [class.status--green]="movement.estadoNuevo === 'ENTREGADA'" [class.status--amber]="movement.estadoNuevo === 'DEVUELTA' || movement.estadoNuevo === 'PENDIENTE'" [class.status--red]="movement.estadoNuevo === 'INCIDENCIA'">{{ movement.estadoAnterior || 'Inicio' }} → {{ movement.estadoNuevo }}</span></strong><p>{{ movement.fechaHora | date:'dd/MM/yyyy HH:mm' }}{{ movement.ubicacion ? ' · ' + movement.ubicacion : '' }}</p>
               @if (movement.responsableNombre) { <p>Responsable: {{ movement.responsableNombre }}</p> }
               @if (movement.observaciones) { <p>{{ movement.observaciones }}</p> }
             </div></li>

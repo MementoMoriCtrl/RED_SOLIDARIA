@@ -33,7 +33,7 @@
             <td><strong>{{ item.nombre }}</strong></td><td>{{ item.tipo }}</td>
             <td>{{ item.fechaInicio | date:'dd/MM/yyyy' }}</td>
             <td>{{ item.fechaFin ? (item.fechaFin | date:'dd/MM/yyyy') : '—' }}</td>
-            <td><span class="status-chip">{{ item.estado }}</span></td>
+            <td><span class="status-chip" [class.status--blue]="item.estado === 'Activa' || item.estado === 'ACTIVA'" [class.status--amber]="item.estado === 'En evaluación'" [class.status--green]="item.estado === 'Completada' || item.estado === 'CERRADA'">{{ item.estado }}</span></td>
             <td><button class="text-button" type="button" [disabled]="saving || loadingDetail" (click)="editEmergency(item)">Administrar</button></td>
           </tr>
         }</tbody>

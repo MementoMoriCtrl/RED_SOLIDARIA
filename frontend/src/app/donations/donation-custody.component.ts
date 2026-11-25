@@ -7,7 +7,7 @@ import { PublicCustody } from './donation-custody.model';
   template: `
     <section class="panel" aria-labelledby="custody-title">
       <p class="eyebrow">SEGUIMIENTO POR RECURSO</p><h2 id="custody-title">Ubicación y estado de tu donación</h2>
-      <p>Estado general registrado: <strong>{{ donationState }}</strong>. Consulta debajo la situación real de cada recurso.</p>
+      <p>Estado general registrado: <strong class="custody-status" [class.status--blue]="['REGISTRADA', 'RECIBIDA', 'ALMACENADA', 'CLASIFICADA'].includes(donationState)" [class.status--purple]="donationState === 'EN_TRANSITO'" [class.status--green]="donationState === 'ENTREGADA'" [class.status--amber]="donationState === 'DEVUELTA' || donationState === 'PENDIENTE'" [class.status--red]="donationState === 'INCIDENCIA'">{{ donationState }}</strong>. Consulta debajo la situación real de cada recurso.</p>
       @if (data; as trace) {
         <p>{{ trace.presentacion }}</p>
         <p>Última actualización de la donación: {{ trace.ultimaActualizacion ? (trace.ultimaActualizacion | date:'dd/MM/yyyy HH:mm') : 'No disponible' }}</p>
@@ -15,7 +15,7 @@ import { PublicCustody } from './donation-custody.model';
         @for (resource of trace.recursos; track $index) {
           <article class="custody-resource">
             <div class="custody-heading"><h3>{{ resource.recurso }} <span>/ {{ resource.unidad }}</span></h3>
-              <span class="custody-status">{{ label(resource.estadoLogistico) }}</span></div>
+              <span class="custody-status" [class.status--purple]="resource.estadoLogistico === 'EN_TRANSITO'" [class.status--blue]="['EN_ACOPIO', 'EN_DISTRIBUCION', 'RECIBIDA', 'RECIBIDO', 'CUSTODIA_DISTRIBUIDA'].includes(resource.estadoLogistico)" [class.status--green]="resource.estadoLogistico === 'ENTREGADA'" [class.status--amber]="['ASIGNADA', 'ENTREGA_PARCIAL', 'PENDIENTE_DE_VERIFICACION'].includes(resource.estadoLogistico)" [class.status--red]="['RECIBIDO_CON_DIFERENCIA', 'SIN_CUSTODIA_CONFIRMADA', 'CUSTODIA_NO_DETERMINADA', 'RESERVA_HISTORICA_SIN_CUSTODIA_CONFIRMADA'].includes(resource.estadoLogistico)">{{ label(resource.estadoLogistico) }}</span></div>
             @if (resource.cantidades; as quantities) {
               <dl class="custody-quantities" aria-label="Cantidades por recurso">
                 <div><dt>Declarada</dt><dd>{{ quantities.declarada | number:'1.0-3' }} {{ resource.unidad }}</dd></div>
@@ -35,7 +35,7 @@ import { PublicCustody } from './donation-custody.model';
               Última actualización: {{ resource.ultimaActualizacion ? (resource.ultimaActualizacion | date:'dd/MM/yyyy HH:mm') : 'No disponible' }}</p>
             <ul>
               @for (point of resource.posiciones; track $index) {
-                <li>{{ label(point.estado) }}: {{ point.cantidad | number:'1.0-3' }} {{ resource.unidad }}
+                <li><span class="custody-status" [class.status--purple]="point.estado === 'EN_TRANSITO'" [class.status--blue]="['EN_ACOPIO', 'EN_DISTRIBUCION', 'RECIBIDA', 'RECIBIDO', 'CUSTODIA_DISTRIBUIDA'].includes(point.estado)" [class.status--green]="point.estado === 'ENTREGADA'" [class.status--amber]="['ASIGNADA', 'ENTREGA_PARCIAL', 'PENDIENTE_DE_VERIFICACION'].includes(point.estado)" [class.status--red]="['RECIBIDO_CON_DIFERENCIA', 'SIN_CUSTODIA_CONFIRMADA', 'CUSTODIA_NO_DETERMINADA', 'RESERVA_HISTORICA_SIN_CUSTODIA_CONFIRMADA'].includes(point.estado)">{{ label(point.estado) }}</span>: {{ point.cantidad | number:'1.0-3' }} {{ resource.unidad }}
                   @if (point.centro) { · {{ point.estado === 'EN_TRANSITO' ? 'Destino previsto: ' : '' }}{{ point.centro.nombre }}
                     @if (point.centro.direccionInstitucional) { · {{ point.centro.direccionInstitucional }} }
                   }
@@ -53,7 +53,7 @@ import { PublicCustody } from './donation-custody.model';
             <h4>Historial logístico de {{ resource.recurso }}</h4>
             <ol class="custody-timeline">
               @for (event of resource.movimientos; track $index) {
-                <li><strong>{{ label(event.evento) }}</strong> · {{ label(event.estado) }}
+                <li><strong>{{ label(event.evento) }}</strong> · <span class="custody-status" [class.status--purple]="event.estado === 'EN_TRANSITO'" [class.status--blue]="['EN_ACOPIO', 'EN_DISTRIBUCION', 'RECIBIDA', 'RECIBIDO', 'CUSTODIA_DISTRIBUIDA'].includes(event.estado)" [class.status--green]="event.estado === 'ENTREGADA'" [class.status--amber]="['ASIGNADA', 'ENTREGA_PARCIAL', 'PENDIENTE_DE_VERIFICACION'].includes(event.estado)" [class.status--red]="['RECIBIDO_CON_DIFERENCIA', 'SIN_CUSTODIA_CONFIRMADA', 'CUSTODIA_NO_DETERMINADA', 'RESERVA_HISTORICA_SIN_CUSTODIA_CONFIRMADA'].includes(event.estado)">{{ label(event.estado) }}</span>
                   <p>{{ event.fechaHora ? (event.fechaHora | date:'dd/MM/yyyy HH:mm') : 'Fecha no disponible' }}</p>
                   @if (event.origen) { <p>Origen: {{ event.origen.nombre }} · {{ event.origen.direccionInstitucional }}</p> }
                   @if (event.destino) { <p>{{ event.evento === 'SALIDA_TRASLADO' ? 'Destino previsto' : 'Centro receptor' }}: {{ event.destino.nombre }} · {{ event.destino.direccionInstitucional }}</p> }
@@ -71,7 +71,7 @@ import { PublicCustody } from './donation-custody.model';
     .custody-resource { border:1px solid var(--border, #dbe2e8); border-radius:1rem; padding:1.25rem; margin-top:1.25rem; min-width:0; }
     .custody-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem; }
     h3 { margin:0; } h3 span { font-weight:400; color:var(--muted); }
-    .custody-status { background:#e7f3ed; color:#1f5b42; border-radius:1.5rem; padding:.4rem .75rem; font-size:.8rem; font-weight:600; }
+    .custody-status { display:inline-block; background:var(--status-blue-bg); color:var(--status-blue-dark); border-radius:1.5rem; padding:.4rem .75rem; font-size:.8rem; font-weight:600; }
     .custody-quantities { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:.6rem; margin:1rem 0; }
     .custody-quantities div { background:#f6f8fa; border-radius:.6rem; padding:.75rem; min-width:0; }
     dt { font-size:.78rem; color:var(--muted); line-height:1.5; } dd { margin:.4rem 0 0; font-weight:600; }

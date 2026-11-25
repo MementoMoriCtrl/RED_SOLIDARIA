@@ -40,7 +40,7 @@
     <section class="panel"><h2>Historial de traslados</h2><div class="table-wrap"><table><thead><tr><th>Operación / lote</th><th>Origen → destino</th><th>Recurso / unidad</th><th>Enviada</th><th>Recibida</th><th>Estado</th><th>Salida / responsable</th><th>Recepción / responsable</th><th>Observaciones</th><th></th></tr></thead>
       <tbody>@for (row of transfers; track row.operacionId) {
         <tr><td>{{ row.operacionId }} / {{ row.detalleDonacionId }}</td><td>{{ row.origen }} → {{ row.destino }}</td><td>{{ row.recurso }} / {{ row.unidad }}</td>
-          <td>{{ row.cantidadEnviada | number:'1.0-3' }}</td><td>{{ row.cantidadRecibida | number:'1.0-3' }}</td><td>{{ row.estado }}</td>
+          <td>{{ row.cantidadEnviada | number:'1.0-3' }}</td><td>{{ row.cantidadRecibida | number:'1.0-3' }}</td><td><span class="status-chip" [class.status--purple]="row.estado === 'EN_TRANSITO'" [class.status--blue]="row.estado === 'RECIBIDO'" [class.status--red]="row.estado === 'RECIBIDO_CON_DIFERENCIA'">{{ row.estado }}</span></td>
           <td>{{ row.fechaSalida | date:'dd/MM/yyyy HH:mm' }} / {{ row.responsableSalida }}</td><td>{{ row.fechaRecepcion | date:'dd/MM/yyyy HH:mm' }} / {{ row.responsableRecepcion }}</td>
           <td>{{ row.observaciones }} {{ row.observacionesRecepcion }}
             @if (row.estado === 'RECIBIDO_CON_DIFERENCIA') {

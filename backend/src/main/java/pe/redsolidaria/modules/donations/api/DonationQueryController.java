@@ -1,6 +1,6 @@
 package pe.redsolidaria.modules.donations.api;
 
-import static pe.redsolidaria.modules.donations.api.dto.DonationDtos.PublicDonationTraceResponse;
+import static pe.redsolidaria.modules.donations.api.dto.DonationDtos.PublicDonationSummary;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,7 +16,7 @@ public class DonationQueryController {
     public DonationQueryController(DonationQueryService service) { this.service = service; }
 
     @GetMapping("/{codigoTrazabilidad}")
-    public PublicDonationTraceResponse findByTrackingCode(@PathVariable String codigoTrazabilidad) {
+    public PublicDonationSummary findByTrackingCode(@PathVariable String codigoTrazabilidad) {
         return service.findPublicByTrackingCode(codigoTrazabilidad);
     }
 }

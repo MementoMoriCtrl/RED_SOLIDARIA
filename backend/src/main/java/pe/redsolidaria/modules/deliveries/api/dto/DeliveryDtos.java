@@ -9,5 +9,6 @@ public final class DeliveryDtos {
     public record SaveDeliveryRequest(
             @NotNull @DecimalMin("0") @Digits(integer = 11, fraction = 3) BigDecimal totalAsignado,
             @NotNull @DecimalMin("0") @Digits(integer = 11, fraction = 3) BigDecimal totalEntregado) {}
-    public record DeliveryResponse(Long entregaId, BigDecimal totalAsignado, BigDecimal totalEntregado, boolean repetida) {}
+    public record DeliveryResponse(Long entregaId, BigDecimal totalAsignado, BigDecimal totalEntregado,
+            boolean repetida, String estadoNecesidad) {}
 }

@@ -88,4 +88,8 @@ public final class DonationDtos {
             this(codigoTrazabilidad,fechaRegistro,fechaIngreso,estado,centroAcopio,detalles,movimientos,null);
         }
     }
+    public record PublicTraceMilestone(String estado, String explicacion, LocalDateTime fechaHora) {}
+    public record PublicDonationSummary(String codigoTrazabilidad, LocalDateTime fechaRegistro,
+            String emergencia, List<String> recursos, String estadoActual, String explicacionEstado,
+            List<PublicTraceMilestone> hitos) {}
 }

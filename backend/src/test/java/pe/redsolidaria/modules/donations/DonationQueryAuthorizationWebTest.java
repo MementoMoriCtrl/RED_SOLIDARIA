@@ -26,10 +26,8 @@ import org.springframework.web.server.ResponseStatusException;
 import pe.redsolidaria.config.SecurityConfiguration;
 import pe.redsolidaria.modules.access.persistence.UserRepository;
 import pe.redsolidaria.modules.donations.api.DonationQueryController;
-import pe.redsolidaria.modules.donations.api.dto.DonationDtos.PublicCollectionCenterSummary;
-import pe.redsolidaria.modules.donations.api.dto.DonationDtos.PublicDonationMovementSummary;
-import pe.redsolidaria.modules.donations.api.dto.DonationDtos.PublicDonationTraceResponse;
-import pe.redsolidaria.modules.donations.api.dto.DonationDtos.PublicDonationDetailSummary;
+import pe.redsolidaria.modules.donations.api.dto.DonationDtos.PublicDonationSummary;
+import pe.redsolidaria.modules.donations.api.dto.DonationDtos.PublicTraceMilestone;
 import pe.redsolidaria.modules.donations.application.DonationQueryService;
 
 @WebMvcTest(DonationQueryController.class)
@@ -46,17 +44,16 @@ class DonationQueryAuthorizationWebTest {
         mvc.perform(get("/api/donaciones/RS-TRACE-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.codigoTrazabilidad").value("RS-TRACE-1"))
-                .andExpect(jsonPath("$.estado").value("REGISTRADA"))
+                .andExpect(jsonPath("$.estadoActual").value("REGISTRADA"))
                 .andExpect(jsonPath("$.id").doesNotExist())
-                .andExpect(jsonPath("$.centroAcopio.ubicacion").value("Miraflores"))
-                .andExpect(jsonPath("$.detalles[0].recursoNombre").value("Agua"))
-                .andExpect(jsonPath("$.detalles[0].recursoId").doesNotExist())
-                .andExpect(jsonPath("$.movimientos[0].estadoNuevo").value("REGISTRADA"))
+                .andExpect(jsonPath("$.recursos[0]").value("Agua"))
+                .andExpect(jsonPath("$.hitos[0].estado").value("REGISTRADA"))
+                .andExpect(jsonPath("$.centroAcopio").doesNotExist())
+                .andExpect(jsonPath("$.detalles").doesNotExist())
+                .andExpect(jsonPath("$.movimientos").doesNotExist())
                 .andExpect(jsonPath("$.donante").doesNotExist())
                 .andExpect(jsonPath("$.emergenciaNombre").doesNotExist())
                 .andExpect(jsonPath("$.observaciones").doesNotExist())
-                .andExpect(jsonPath("$.movimientos[0].responsableNombre").doesNotExist())
-                .andExpect(jsonPath("$.movimientos[0].observaciones").doesNotExist())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
                         .doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
         verify(service).findPublicByTrackingCode("RS-TRACE-1");
@@ -90,13 +87,10 @@ class DonationQueryAuthorizationWebTest {
                 .andExpect(status().isNotFound());
     }
 
-    private static PublicDonationTraceResponse response() {
+    private static PublicDonationSummary response() {
         LocalDateTime now = LocalDateTime.parse("2026-04-02T10:00:00");
-        return new PublicDonationTraceResponse("RS-TRACE-1", now, null, "REGISTRADA",
-                new PublicCollectionCenterSummary("Centro", "Miraflores"),
-                List.of(new PublicDonationDetailSummary("Agua", java.math.BigDecimal.TEN,
-                        null, "L", "Litro", "L")),
-                List.of(new PublicDonationMovementSummary(null, "REGISTRADA", now, "Miraflores")));
+        return new PublicDonationSummary("RS-TRACE-1", now, null, List.of("Agua"), "REGISTRADA",
+                "Donación registrada", List.of(new PublicTraceMilestone("REGISTRADA", "Donación registrada", now)));
     }
 
     @TestConfiguration

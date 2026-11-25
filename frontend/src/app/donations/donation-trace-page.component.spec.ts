@@ -34,8 +34,8 @@ describe('DonationTracePageComponent', () => {
     fixture.detectChanges();
     expect((fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
     request.flush({
-      codigoTrazabilidad: 'RS-TRACE-2', fechaRegistro: '2026-04-02T10:00:00', fechaIngreso: null,
-      estado: 'REGISTRADA', centroAcopio: null, detalles: [], movimientos: [],
+      codigoTrazabilidad: 'RS-TRACE-2', fechaRegistro: '2026-04-02T10:00:00', emergencia: null,
+      recursos: [], estadoActual: 'REGISTRADA', explicacionEstado: 'Registrada', hitos: [],
     });
     await fixture.whenStable();
 
@@ -47,39 +47,25 @@ describe('DonationTracePageComponent', () => {
     expect((fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('renders the public donation, details and movement history without personal fields', () => {
+  it('renders only the public summary and confirmed milestones', () => {
     fixture.componentInstance.codigo = 'RS-TRACE-2';
     fixture.componentInstance.consultar();
 
     const response: DonationTrace = {
       codigoTrazabilidad: 'RS-TRACE-2',
       fechaRegistro: '2026-04-02T10:00:00',
-      fechaIngreso: null,
-      estado: 'REGISTRADA',
-      centroAcopio: { nombre: 'Centro de acopio', ubicacion: 'Miraflores' },
-      detalles: [{
-        recursoNombre: 'Arroz',
-        cantidadDonada: 12.5,
-        cantidadRecibidaAcopio: null,
-        unidadCodigo: 'KG',
-        unidadNombre: 'Kilogramo',
-        unidadSimbolo: 'kg',
-      }],
-      movimientos: [{
-        estadoAnterior: null,
-        estadoNuevo: 'REGISTRADA',
-        fechaHora: '2026-04-02T10:00:00',
-        ubicacion: 'Miraflores',
-      }],
+      emergencia: 'Emergencia norte', recursos: ['Arroz'], estadoActual: 'REGISTRADA',
+      explicacionEstado: 'La donación fue registrada.',
+      hitos: [{ estado: 'REGISTRADA', explicacion: 'Donación registrada', fechaHora: '2026-04-02T10:00:00' }],
     };
     http.expectOne('/api/donaciones/RS-TRACE-2').flush(response);
     fixture.detectChanges();
 
     const page = fixture.nativeElement as HTMLElement;
     expect(page.textContent).toContain('RS-TRACE-2');
-    expect(page.textContent).toContain('Centro de acopio');
+    expect(page.textContent).toContain('Emergencia norte');
     expect(page.textContent).toContain('Arroz');
-    expect(page.textContent).toContain('REGISTRADA');
+    expect(page.textContent).toContain('Registrada');
     expect(page.textContent).not.toContain('null');
     expect(page.textContent).not.toContain('undefined');
   });
@@ -107,20 +93,15 @@ describe('DonationTracePageComponent', () => {
     fixture.componentInstance.consultar();
     const place = { tipo: 'ACOPIO', nombre: 'Centro de Acopio Prueba 2', direccionInstitucional: 'Dirección institucional acopio' };
     http.expectOne('/api/donaciones/RS-RECEIVED').flush({
-      codigoTrazabilidad: 'RS-RECEIVED', fechaRegistro: '2026-11-12T10:00:00', fechaIngreso: null,
-      estado: 'REGISTRADA', centroAcopio: { nombre: place.nombre, ubicacion: place.direccionInstitucional }, detalles: [],
-      trazabilidad: { presentacion: 'Dirección exacta protegida por privacidad', emergencia: null,
-        recepcionAcopioConfirmada: true, recursos: [{ recurso: 'Arroz', unidad: 'KG', estadoLogistico: 'EN_ACOPIO',
-          ultimaCustodiaConfirmada: place, ultimaConfirmacion: '2026-11-12T11:00:00', ultimaActualizacion: '2026-11-12T11:00:00',
-          posiciones: [{ estado: 'EN_ACOPIO', centro: place, zona: null, cantidad: 10 }], movimientos: [], aclaracion: 'Sin GPS' }] },
-      movimientos: [{ descripcion: 'Recepción confirmada en centro de acopio', estadoAnterior: null, estadoNuevo: 'RECIBIDA',
-        fechaHora: '2026-11-12T11:00:00', ubicacion: place.nombre, destino: place, recurso: 'Arroz', unidad: 'KG', cantidadRecibida: 10 }],
+      codigoTrazabilidad: 'RS-RECEIVED', fechaRegistro: '2026-11-12T10:00:00', emergencia: null,
+      recursos: ['Arroz'], estadoActual: 'RECIBIDA', explicacionEstado: 'Recepción confirmada',
+      hitos: [{ estado: 'RECIBIDA', explicacion: 'Recepción confirmada', fechaHora: '2026-11-12T11:00:00' }],
     });
     await fixture.whenStable();
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Recepción física confirmada en acopio');
-    expect(text).toContain(place.nombre);
-    expect(text).toContain(place.direccionInstitucional);
+    expect(text).toContain('Recepción confirmada');
+    expect(text).not.toContain(place.nombre);
+    expect(text).not.toContain(place.direccionInstitucional);
     expect(text).not.toContain('pendiente de confirmación documental');
     expect(text).not.toContain('No indicada');
     expect(text).not.toContain('Información de custodia no disponible');

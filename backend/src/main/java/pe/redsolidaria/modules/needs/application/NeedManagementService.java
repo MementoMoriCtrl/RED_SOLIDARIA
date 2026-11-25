@@ -88,6 +88,7 @@ public class NeedManagementService {
                 || !Long.valueOf(emergencyId).equals(need.getZona().getEmergencia().getId()))
             throw missing("Necesidad no encontrada en la zona y emergencia");
         if (!"PENDIENTE".equals(need.getEstado())) throw conflict("Solo se pueden editar necesidades pendientes");
+        if (isFullyDelivered(needId, need)) throw conflict("Una necesidad completamente atendida no se puede editar");
         if (request.cantidad().compareTo(lines.assignedToNeed(needId)) < 0)
             throw conflict("La cantidad requerida no puede ser menor que la asignada");
         var actor = users.findByCorreo(email.trim().toLowerCase(Locale.ROOT))
@@ -111,16 +112,29 @@ public class NeedManagementService {
                 || !Long.valueOf(emergencyId).equals(need.getZona().getEmergencia().getId()))
             throw missing("Necesidad no encontrada en la zona y emergencia");
         if (!"PENDIENTE".equals(need.getEstado())) throw conflict("La necesidad ya no está pendiente");
-        if ("CERRADA".equals(target) && lines.deliveredToNeed(needId).compareTo(need.getCantidadRequerida()) < 0)
-            throw conflict("La necesidad debe estar completamente entregada para cerrarse");
-        if ("CANCELADA".equals(target) && !lines.sourcesWithPendingReservations(needId).isEmpty())
-            throw conflict("Existen reservas pendientes de entregar");
+        var assigned = lines.assignedToNeed(needId);
+        var delivered = lines.deliveredToNeed(needId);
+        if ("CERRADA".equals(target)) {
+            if (delivered.compareTo(need.getCantidadRequerida()) < 0
+                    || assigned.compareTo(need.getCantidadRequerida()) < 0
+                    || assigned.compareTo(delivered) < 0)
+                throw conflict("La necesidad debe estar completamente entregada y asignada para cerrarse");
+            if (!lines.sourcesWithPendingReservations(needId).isEmpty())
+                throw conflict("Existen reservas pendientes de entregar");
+        }
+        if ("CANCELADA".equals(target)) {
+            if (delivered.compareTo(need.getCantidadRequerida()) >= 0)
+                throw conflict("Una necesidad completamente atendida no se puede cancelar");
+            if (!lines.sourcesWithPendingReservations(needId).isEmpty())
+                throw conflict("Existen reservas pendientes de entregar");
+        }
         var actor = users.findByCorreo(email.trim().toLowerCase(Locale.ROOT))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         String previous = need.getEstado();
         need.cambiarEstado(target);
         needs.saveAndFlush(need);
-        audit.saveAndFlush(new AuditRecord(actor, "NECESIDAD", Long.toString(needId), "TRANSICION_NECESIDAD",
+        String action = "CERRADA".equals(target) ? "CIERRE_MANUAL_NECESIDAD" : "CANCELACION_NECESIDAD";
+        audit.saveAndFlush(new AuditRecord(actor, "NECESIDAD", Long.toString(needId), action,
                 json.writeValueAsString(Map.of("estado", previous)),
                 json.writeValueAsString(Map.of("estado", target, "motivo", request.motivo().trim()))));
         return response(need);
@@ -136,11 +150,13 @@ public class NeedManagementService {
 
     public SourcePage sources(long needId, int page) {
         var need = needs.findById(needId).orElseThrow(() -> missing("Necesidad no encontrada"));
+        boolean fullyDelivered = isFullyDelivered(needId, need);
         var result = donations.findSources(need.getZona().getEmergencia().getId(), need.getRecurso().getId(), PageRequest.of(page, 20));
         return new SourcePage(result.getContent().stream().map(line -> {
             var assigned = lines.assignedToDonation(line.getId());
             boolean usable = USABLE_STATES.contains(line.getDonacion().getEstado())
-                    && "ACTIVO".equals(need.getRecurso().getEstado()) && "PENDIENTE".equals(need.getEstado());
+                    && "ACTIVO".equals(need.getRecurso().getEstado()) && "PENDIENTE".equals(need.getEstado())
+                    && !fullyDelivered;
             return new DonationSource(line.getId(), line.getDonacion().getCodigoTrazabilidad(), line.getDonacion().getEstado(),
                     line.getCantidadRecibidaAcopio(), assigned,
                     usable ? logistics.received(line.getId()).subtract(lines.distributionAssigned(line.getId())).max(BigDecimal.ZERO) : BigDecimal.ZERO,
@@ -151,11 +167,24 @@ public class NeedManagementService {
     public NeedResponse response(Need need) {
         var assigned = lines.assignedToNeed(need.getId());
         var delivered = lines.deliveredToNeed(need.getId());
+        String visibleState = "PENDIENTE".equals(need.getEstado())
+                && isFullyDelivered(need.getId(), need, assigned, delivered) ? "CERRADA" : need.getEstado();
         return new NeedResponse(need.getId(), need.getZona().getId(), need.getRecurso().getId(),
                 need.getRecurso().getNombre(), need.getRecurso().getUnidadMedida().getCodigo(), need.getPrioridad(),
-                need.getEstado(), need.getCantidadRequerida(), assigned, delivered,
+                visibleState, need.getCantidadRequerida(), assigned, delivered,
                 need.getCantidadRequerida().subtract(assigned).max(BigDecimal.ZERO),
                 need.getCantidadRequerida().subtract(delivered).max(BigDecimal.ZERO), need.getObservaciones());
+    }
+
+    private boolean isFullyDelivered(long needId, Need need) {
+        return isFullyDelivered(needId, need, lines.assignedToNeed(needId), lines.deliveredToNeed(needId));
+    }
+
+    private boolean isFullyDelivered(long needId, Need need, BigDecimal assigned, BigDecimal delivered) {
+        return assigned.compareTo(need.getCantidadRequerida()) >= 0
+                && delivered.compareTo(need.getCantidadRequerida()) >= 0
+                && assigned.compareTo(delivered) >= 0
+                && lines.sourcesWithPendingReservations(needId).isEmpty();
     }
 
     private pe.redsolidaria.modules.emergencies.domain.AffectedZone zone(long emergencyId, long zoneId) {

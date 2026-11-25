@@ -52,8 +52,8 @@ describe('AppShellComponent', () => {
     fixture.detectChanges();
     const links = Array.from(fixture.nativeElement.querySelectorAll('.side-nav a')) as HTMLAnchorElement[];
     expect(links.map(link => link.getAttribute('href'))).toEqual([
-      '/admin/reportes', '/admin', '/donaciones/registro', '/admin/usuarios', '/admin/roles', '/admin/catalogos-donaciones', '/admin/donaciones',
-      '/admin/logistica', '/admin/emergencias', '/recursos', '/admin/auditoria', '/trazabilidad',
+      '/admin', '/admin/emergencias', '/recursos', '/admin/catalogos-donaciones', '/donaciones/registro', '/admin/donaciones',
+      '/admin/logistica', '/trazabilidad', '/admin/reportes', '/admin/usuarios', '/admin/roles', '/admin/auditoria',
     ]);
     expect(fixture.nativeElement.querySelector('.sidebar-footer .sidebar-session-button')).toBeTruthy();
   });

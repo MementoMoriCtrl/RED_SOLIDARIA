@@ -3,13 +3,13 @@
 .donation-table-wrap { margin-top: 1rem; overflow-x: auto; padding: 0; }
 .donation-table td:nth-child(3) span { display: block; white-space: normal; }
 .tracking-code { color: var(--navy); font-weight: 750; }
-.donation-status { display: inline-flex; padding: .3rem .55rem; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: .68rem; font-weight: 750; }
+.donation-status { display: inline-flex; padding: .3rem .55rem; border-radius: 999px; background: var(--color-info-bg); color: var(--blue-hover); font-size: .68rem; font-weight: 750; }
 .detail-link { color: var(--blue-hover); font-weight: 700; text-decoration: none; }
 .detail-link:hover { text-decoration: underline; }
 .donation-load, .donation-empty { display: flex; align-items: center; gap: .7rem; margin-top: 1rem; color: var(--muted); font-size: .86rem; }
 .donation-empty { display: block; }
 .donation-empty h2 { margin-bottom: .4rem; color: var(--navy); }
 .donation-empty p { margin: 0; font-size: .84rem; }
-.donation-spinner { flex: 0 0 auto; border-color: #bfdbfe; border-top-color: var(--blue); }
+.donation-spinner { flex: 0 0 auto; border-color: var(--color-info-border); border-top-color: var(--blue); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 @media (max-width: 720px) { .donation-filters { grid-template-columns: 1fr; } .donation-filters .primary-button { width: 100%; } }
